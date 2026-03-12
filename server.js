@@ -42,6 +42,13 @@ app.post('/auth/login', async (req, res) => {
     if (!rows.length) return res.status(401).json({ erro: 'Email ou senha incorretos' });
     const ok = await bcrypt.compare(senha, rows[0].senha_hash);
     if (!ok) return res.status(401).json({ erro: 'Email ou senha incorretos' });
+    // Verificar bloqueio por vencimento
+    if (rows[0].bloquear_vencer) {
+      const expira = new Date(rows[0].plano_expira);
+      if (expira < new Date()) {
+        return res.status(403).json({ erro: 'Acesso bloqueado. Plano vencido. Entre em contato com o suporte.' });
+      }
+    }
     const token = jwt.sign(
       { id: rows[0].id, nome: rows[0].nome, email: rows[0].email },
       process.env.JWT_SECRET, { expiresIn: '7d' }
@@ -73,7 +80,7 @@ app.post('/auth/cadastro', async (req, res) => {
 app.get('/auth/me', auth, async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias FROM clientes WHERE id = ?',
+      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias, bloquear_vencer FROM clientes WHERE id = ?',
       [req.user.id]
     );
     if (!rows.length) return res.status(404).json({ erro: 'Não encontrado' });
@@ -143,7 +150,7 @@ app.get('/payments', auth, async (req, res) => {
 app.get('/master/clients', async (req, res) => {
   try {
     const [clientes] = await db.query(
-      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias FROM clientes ORDER BY nome'
+      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias, bloquear_vencer FROM clientes ORDER BY nome'
     );
     for (const c of clientes) {
       const [aparelhos] = await db.query(
@@ -160,7 +167,7 @@ app.get('/master/clients', async (req, res) => {
 app.get('/master/client-token/:id', async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias FROM clientes WHERE id = ?',
+      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias, bloquear_vencer FROM clientes WHERE id = ?',
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ erro: 'Cliente não encontrado' });
@@ -189,10 +196,10 @@ app.post('/master/add-days', async (req, res) => {
 // ── MASTER — configurar mensalidade do cliente ──
 app.post('/master/config-cliente', async (req, res) => {
   try {
-    const { cliente_id, mensalidade_valor, mensalidade_dias } = req.body;
+    const { cliente_id, mensalidade_valor, mensalidade_dias, bloquear_vencer } = req.body;
     await db.query(
-      'UPDATE clientes SET mensalidade_valor = ?, mensalidade_dias = ? WHERE id = ?',
-      [mensalidade_valor || 0, mensalidade_dias || 30, cliente_id]
+      'UPDATE clientes SET mensalidade_valor = ?, mensalidade_dias = ?, bloquear_vencer = ? WHERE id = ?',
+      [mensalidade_valor || 0, mensalidade_dias || 30, bloquear_vencer ? 1 : 0, cliente_id]
     );
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: e.message }); }
@@ -226,6 +233,7 @@ app.listen(PORT, async () => {
     `ALTER TABLE aparelhos ADD COLUMN mp_user_id VARCHAR(100) NULL`,
     `ALTER TABLE clientes ADD COLUMN mensalidade_valor DECIMAL(10,2) DEFAULT 0`,
     `ALTER TABLE clientes ADD COLUMN mensalidade_dias INT DEFAULT 30`,
+    `ALTER TABLE clientes ADD COLUMN bloquear_vencer TINYINT(1) DEFAULT 0`,
   ];
   for (const sql of migrations) {
     try { await db.query(sql); }
