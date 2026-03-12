@@ -73,7 +73,7 @@ app.post('/auth/cadastro', async (req, res) => {
 app.get('/auth/me', auth, async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT id, nome, email, plano_expira FROM clientes WHERE id = ?',
+      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias FROM clientes WHERE id = ?',
       [req.user.id]
     );
     if (!rows.length) return res.status(404).json({ erro: 'Não encontrado' });
@@ -160,7 +160,7 @@ app.get('/master/clients', async (req, res) => {
 app.get('/master/client-token/:id', async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT id, nome, email, plano_expira FROM clientes WHERE id = ?',
+      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias FROM clientes WHERE id = ?',
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ erro: 'Cliente não encontrado' });
