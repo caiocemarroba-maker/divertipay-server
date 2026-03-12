@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TarifaPay — Painel do Cliente</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<title>DivertiPay — Painel do Cliente</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
@@ -22,7 +22,7 @@
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
   body {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -64,7 +64,7 @@
     font-size:26px; margin-bottom:12px;
     box-shadow: 0 8px 20px rgba(249,115,22,0.3);
   }
-  .brand-name { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; }
+  .brand-name { font-family:'Inter',sans-serif; font-size:24px; font-weight:800; }
   .brand-name span { color:var(--accent); }
   .brand-sub { font-size:13px; color:var(--muted); margin-top:2px; }
 
@@ -76,7 +76,7 @@
   .field input {
     width:100%; padding:13px 15px;
     border:1.5px solid var(--border); border-radius:12px;
-    font-family:'DM Sans',sans-serif; font-size:15px; color:var(--text);
+    font-family:'Inter',sans-serif; font-size:15px; color:var(--text);
     background:#fafafa; outline:none; transition:all 0.2s;
   }
   .field input:focus {
@@ -88,7 +88,7 @@
     width:100%; padding:15px; margin-top:6px;
     background:linear-gradient(135deg, var(--accent), #ea580c);
     border:none; border-radius:12px; color:white;
-    font-family:'Syne',sans-serif; font-size:16px; font-weight:700;
+    font-family:'Inter',sans-serif; font-size:16px; font-weight:700;
     cursor:pointer; box-shadow:0 4px 16px rgba(249,115,22,0.3);
     transition:all 0.2s;
   }
@@ -114,7 +114,7 @@
   }
   .tb-row2::-webkit-scrollbar { display:none; }
   .tb-brand {
-    font-family:'Syne',sans-serif; font-size:18px; font-weight:800;
+    font-family:'Inter',sans-serif; font-size:18px; font-weight:800;
     flex:1; display:flex; align-items:center; gap:8px;
   }
   .tb-icon {
@@ -139,7 +139,7 @@
 
   .tb-back {
     padding:8px 14px; border:1.5px solid var(--border); border-radius:10px;
-    background:none; font-family:'DM Sans',sans-serif; font-size:13px;
+    background:none; font-family:'Inter',sans-serif; font-size:13px;
     font-weight:600; color:var(--muted); cursor:pointer; transition:all 0.15s;
   }
   .tb-back:hover { border-color:var(--accent); color:var(--accent); }
@@ -159,7 +159,7 @@
     border-radius:14px; padding:14px 12px; text-align:center;
   }
   .sum-val {
-    font-family:'Syne',sans-serif; font-size:20px; font-weight:800; line-height:1; margin-bottom:4px;
+    font-family:'Inter',sans-serif; font-size:20px; font-weight:800; line-height:1; margin-bottom:4px;
   }
   .sum-lbl { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
 
@@ -167,10 +167,10 @@
   .sec-head {
     display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
   }
-  .sec-title { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; }
+  .sec-title { font-family:'Inter',sans-serif; font-size:15px; font-weight:700; }
   .sec-btn {
     padding:7px 14px; border:1.5px solid var(--border); border-radius:10px;
-    background:none; font-family:'DM Sans',sans-serif; font-size:13px;
+    background:none; font-family:'Inter',sans-serif; font-size:13px;
     font-weight:600; color:var(--accent); cursor:pointer; transition:all 0.15s;
   }
   .sec-btn:hover { background:rgba(249,115,22,0.06); border-color:var(--accent); }
@@ -207,11 +207,11 @@
   .dev-meta { font-size:12px; color:var(--muted); margin-top:2px; }
 
   .dev-val {
-    font-family:'Syne',sans-serif; font-size:15px; font-weight:800;
+    font-family:'Inter',sans-serif; font-size:15px; font-weight:800;
     color:var(--green); flex-shrink:0; text-align:right;
   }
   .dev-val small {
-    display:block; font-family:'DM Sans',sans-serif;
+    display:block; font-family:'Inter',sans-serif;
     font-size:11px; font-weight:400; color:var(--muted);
   }
 
@@ -265,7 +265,7 @@
   .filter-field input {
     width:100%; padding:10px 12px;
     border:1.5px solid var(--border); border-radius:10px;
-    font-family:'DM Sans',sans-serif; font-size:13px; color:var(--text);
+    font-family:'Inter',sans-serif; font-size:13px; color:var(--text);
     background:#fafafa; outline:none; transition:all 0.2s;
   }
   .filter-field input:focus { border-color:var(--accent); background:#fff; }
@@ -276,7 +276,7 @@
     flex:1; padding:11px;
     background:linear-gradient(135deg,var(--accent),#ea580c);
     border:none; border-radius:10px; color:white;
-    font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
     cursor:pointer; transition:all 0.15s;
   }
   .btn-filter:hover { box-shadow:0 4px 12px rgba(249,115,22,0.3); }
@@ -285,7 +285,7 @@
     padding:11px 16px;
     background:#fff; border:1.5px solid var(--border);
     border-radius:10px; color:var(--text);
-    font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
     cursor:pointer; transition:all 0.15s; display:flex; align-items:center; gap:6px;
   }
   .btn-pdf:hover { border-color:var(--red); color:var(--red); }
@@ -298,7 +298,7 @@
     background:var(--card); border:1px solid var(--border);
     border-radius:12px; padding:12px; text-align:center;
   }
-  .ps-val { font-family:'Syne',sans-serif; font-size:17px; font-weight:800; line-height:1; margin-bottom:3px; }
+  .ps-val { font-family:'Inter',sans-serif; font-size:17px; font-weight:800; line-height:1; margin-bottom:3px; }
   .ps-lbl { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.4px; }
 
   /* HISTÓRICO ITEM */
@@ -315,7 +315,7 @@
   .pay-info { flex:1; }
   .pay-device { font-size:13px; font-weight:600; }
   .pay-meta   { font-size:12px; color:var(--muted); margin-top:2px; }
-  .pay-val    { font-family:'Syne',sans-serif; font-size:15px; font-weight:800; flex-shrink:0; }
+  .pay-val    { font-family:'Inter',sans-serif; font-size:15px; font-weight:800; flex-shrink:0; }
 
   /* MODAL PULSO */
   .overlay {
@@ -340,7 +340,7 @@
     width:36px; height:4px; background:var(--border);
     border-radius:2px; margin:0 auto 20px;
   }
-  .modal-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; margin-bottom:4px; }
+  .modal-title { font-family:'Inter',sans-serif; font-size:18px; font-weight:800; margin-bottom:4px; }
   .modal-sub   { font-size:13px; color:var(--muted); margin-bottom:22px; }
 
   .pulse-big {
@@ -348,7 +348,7 @@
     background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:16px; margin-bottom:18px;
   }
   .pulse-num {
-    font-family:'Syne',sans-serif; font-size:64px; font-weight:800;
+    font-family:'Inter',sans-serif; font-size:64px; font-weight:800;
     color:var(--green); line-height:1;
   }
   .pulse-desc { font-size:13px; color:var(--muted); margin-top:6px; }
@@ -356,7 +356,7 @@
   .pulse-row { display:flex; gap:8px; margin-bottom:18px; }
   .pctl {
     flex:1; padding:13px; border-radius:12px; border:1.5px solid var(--border);
-    background:none; font-family:'DM Sans',sans-serif; font-size:18px; font-weight:700;
+    background:none; font-family:'Inter',sans-serif; font-size:18px; font-weight:700;
     cursor:pointer; color:var(--text); transition:all 0.15s;
   }
   .pctl:hover { border-color:var(--accent); color:var(--accent); background:rgba(249,115,22,0.05); }
@@ -364,13 +364,13 @@
   .modal-btns { display:flex; gap:10px; }
   .btn-cancel {
     flex:1; padding:14px; border-radius:12px; border:1.5px solid var(--border);
-    background:none; font-family:'DM Sans',sans-serif; font-size:14px;
+    background:none; font-family:'Inter',sans-serif; font-size:14px;
     font-weight:600; color:var(--muted); cursor:pointer;
   }
   .btn-send {
     flex:2; padding:14px; border-radius:12px; border:none;
     background:linear-gradient(135deg,var(--green),#16a34a); color:white;
-    font-family:'Syne',sans-serif; font-size:15px; font-weight:700;
+    font-family:'Inter',sans-serif; font-size:15px; font-weight:700;
     cursor:pointer; box-shadow:0 4px 14px rgba(34,197,94,0.3); transition:all 0.15s;
   }
   .btn-send:hover { box-shadow:0 6px 20px rgba(34,197,94,0.4); }
@@ -406,8 +406,8 @@
 <div id="login" class="screen active">
   <div class="login-box" style="margin:auto">
     <div class="brand">
-      <div class="brand-icon">⚡</div>
-      <div class="brand-name">Tarifa<span>Pay</span></div>
+      <div class="brand-icon">🎮</div>
+      <div class="brand-name">Diverti<span>Pay</span></div>
       <div class="brand-sub">Painel do Cliente</div>
     </div>
     <div class="field">
@@ -421,7 +421,7 @@
     <button class="btn-primary" onclick="doLogin()">Entrar</button>
     <div class="login-foot">
       Suporte via WhatsApp<br>
-      TarifaPay © 2026 · <span id="clock"></span>
+      DivertiPay © 2026 · <span id="clock"></span>
     </div>
   </div>
 </div>
@@ -430,9 +430,9 @@
 <div id="devices" class="screen">
   <div class="topbar">
     <div class="tb-row1">
-      <div class="tb-brand"><div class="tb-icon">⚡</div>Tarifa<span>Pay</span></div>
+      <div class="tb-brand"><div class="tb-icon">🎮</div>Diverti<span>Pay</span></div>
       <div id="days-badge" title="Dias restantes da mensalidade" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:38px;height:36px;border-radius:10px;padding:0 8px;border:1.5px solid var(--border);background:#f4f6f9;cursor:default;flex-shrink:0;">
-        <span id="days-num" style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;line-height:1;color:#1a1a2e">21</span>
+        <span id="days-num" style="font-family:'Inter',sans-serif;font-size:15px;font-weight:800;line-height:1;color:#1a1a2e">21</span>
         <span style="font-size:9px;font-weight:600;color:var(--muted);letter-spacing:0.3px;text-transform:uppercase">dias</span>
       </div>
       <div class="tb-user" onclick="doLogout()">
@@ -460,10 +460,27 @@
         <div class="sum-lbl">Hoje</div>
       </div>
     </div>
-    <div class="sec-head">
+      <div class="sec-head">
       <div class="sec-title">📡 Meus Aparelhos</div>
+      <button class="sec-btn" onclick="openNovoAparelho()">+ Novo</button>
     </div>
     <div id="device-list"></div>
+  </div>
+</div>
+
+<!-- MODAL NOVO APARELHO -->
+<div id="modal-novo-aparelho" class="modal-overlay" onclick="if(event.target===this)closeNovoAparelho()">
+  <div class="modal-box">
+    <div class="modal-title">➕ Novo Aparelho</div>
+    <div class="modal-sub">Digite o nome do local onde ficará o aparelho</div>
+    <div class="field" style="margin-top:16px">
+      <label>Nome do aparelho</label>
+      <input type="text" id="inp-novo-aparelho" placeholder="Ex: Bar do João, Sala 01...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeNovoAparelho()">Cancelar</button>
+      <button class="btn-primary" style="width:auto;padding:12px 24px" onclick="confirmarNovoAparelho()">Criar Aparelho</button>
+    </div>
   </div>
 </div>
 
@@ -471,7 +488,7 @@
 <div id="payments" class="screen">
   <div class="topbar">
     <div class="tb-row1">
-      <div class="tb-brand"><div class="tb-icon">⚡</div>Tarifa<span>Pay</span></div>
+      <div class="tb-brand"><div class="tb-icon">🎮</div>Diverti<span>Pay</span></div>
       <button class="tb-back" onclick="goTo('devices')">← Voltar</button>
     </div>
   </div>
@@ -551,14 +568,14 @@
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <button id="tipo-normal-btn" onclick="setPulsoTipo('manual_normal')"
         style="flex:1;padding:10px 8px;border-radius:11px;border:1.5px solid var(--accent);
-               background:rgba(249,115,22,0.08);color:var(--accent);font-family:'DM Sans',sans-serif;
+               background:rgba(249,115,22,0.08);color:var(--accent);font-family:'Inter',sans-serif;
                font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;line-height:1.3">
         ⚡ Pagamento Manual<br>
         <span style="font-size:10px;font-weight:400;opacity:0.8">Soma ao montante</span>
       </button>
       <button id="tipo-baixado-btn" onclick="setPulsoTipo('manual_baixado')"
         style="flex:1;padding:10px 8px;border-radius:11px;border:1.5px solid var(--border);
-               background:none;color:var(--muted);font-family:'DM Sans',sans-serif;
+               background:none;color:var(--muted);font-family:'Inter',sans-serif;
                font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;line-height:1.3">
         💵 Dinheiro Manual<br>
         <span style="font-size:10px;font-weight:400;opacity:0.8">Não soma (baixado)</span>
@@ -601,7 +618,6 @@ async function api(method, path, body = null) {
   return res.json();
 }
 
-// ── DADOS (carregados da API) ──
 let devices      = [];
 let allPayments  = [];
 let pulseCount   = 0;
@@ -628,38 +644,32 @@ async function doLogin() {
     if (!data.token) { showToast(data.erro || 'Email ou senha incorretos'); return; }
     localStorage.setItem('dp_token', data.token);
     localStorage.setItem('dp_nome', data.nome);
-    localStorage.setItem('dp_expira', data.plano_expira);
     const nomeFormatado = data.nome.split(' ')[0];
     document.getElementById('user-name').textContent    = nomeFormatado;
     document.getElementById('user-initial').textContent = nomeFormatado[0].toUpperCase();
-    // Calcular dias restantes
     const expira = new Date(data.plano_expira);
-    const hoje   = new Date();
-    const dias   = Math.max(0, Math.ceil((expira - hoje) / (1000*60*60*24)));
+    const dias   = Math.max(0, Math.ceil((expira - new Date()) / (1000*60*60*24)));
     setDaysBadge(dias);
     goTo('devices');
     setDefaultDates();
     await carregarDados();
   } catch(e) {
-    showToast('Erro de conexão. Tente novamente.');
+    showToast('Erro de conexão');
   }
 }
 
 async function carregarDados() {
   showToast('Carregando...');
-  // Carregar aparelhos
   const devData = await api('GET', '/devices');
   devices = (devData || []).map(d => ({
-    id:     d.token || String(d.id),
+    id:     String(d.id),
     name:   d.nome,
     status: d.online ? 'online' : 'offline',
-    today:  0,
-    sales:  0,
+    today:  0, sales: 0,
     cash:   parseFloat(d.noteiro_total) || 0
   }));
-  // Carregar pagamentos
-  const from = document.getElementById('date-from')?.value || '2000-01-01';
-  const to   = document.getElementById('date-to')?.value   || '2099-12-31';
+  const from = document.getElementById('f-start')?.value || '2000-01-01';
+  const to   = document.getElementById('f-end')?.value   || '2099-12-31';
   const payData = await api('GET', `/payments?from=${from}&to=${to}`);
   allPayments = (payData || []).map(p => ({
     id:        p.id,
@@ -676,10 +686,31 @@ async function carregarDados() {
   renderPayments(allPayments);
 }
 
+// ── NOVO APARELHO ──
+function openNovoAparelho() {
+  document.getElementById('modal-novo-aparelho').classList.add('open');
+}
+function closeNovoAparelho() {
+  document.getElementById('modal-novo-aparelho').classList.remove('open');
+  document.getElementById('inp-novo-aparelho').value = '';
+}
+async function confirmarNovoAparelho() {
+  const nome = document.getElementById('inp-novo-aparelho').value.trim();
+  if (!nome) { showToast('Digite o nome do aparelho'); return; }
+  showToast('Criando aparelho...');
+  const data = await api('POST', '/devices', { nome });
+  if (data.ok) {
+    closeNovoAparelho();
+    showToast('✅ Aparelho criado! Token: ' + data.token);
+    await carregarDados();
+  } else {
+    showToast(data.erro || 'Erro ao criar aparelho');
+  }
+}
+
 function doLogout() {
   localStorage.removeItem('dp_token');
   localStorage.removeItem('dp_nome');
-  localStorage.removeItem('dp_expira');
   goTo('login');
 }
 
@@ -809,27 +840,23 @@ function setDefaultDates() {
 
 let currentDeviceFilter = null; // null = todos os aparelhos
 
-async function applyFilter() {
+function applyFilter() {
   const s = document.getElementById('f-start').value;
   const e = document.getElementById('f-end').value;
-  if (s && e) {
-    const payData = await api('GET', `/payments?from=${s}&to=${e}`);
-    allPayments = (payData || []).map(p => ({
-      id:        p.id,
-      device:    p.aparelho_nome,
-      val:       parseFloat(p.valor),
-      method:    p.tipo === 'pix' ? 'PIX' : p.tipo === 'cartao' ? 'Cartão' : 'Noteiro',
-      date:      p.criado_em?.replace('T',' ').substring(0,16) || '',
-      ok:        p.status === 'confirmado',
-      tipo:      'normal',
-      recolhido: !!p.recolhido
-    }));
-  }
   let base = currentDeviceFilter
     ? allPayments.filter(p => p.device === currentDeviceFilter)
     : allPayments;
+
+  if (s && e) {
+    const start = new Date(s), end = new Date(e);
+    base = base.filter(p => {
+      const d = new Date(p.date.replace(' ','T'));
+      return d >= start && d <= end;
+    });
+  }
   filteredPayments = base;
   renderPayments(base);
+
   showDeviceChip(currentDeviceFilter || null);
 }
 
@@ -1666,7 +1693,7 @@ function confirmRename() {
       <label>Novo nome do ponto</label>
       <input type="text" id="rename-input" placeholder="Ex: Bar do João" maxlength="40"
         style="padding:14px 15px;border:1.5px solid var(--border);border-radius:12px;
-               font-size:16px;width:100%;outline:none;font-family:'DM Sans',sans-serif;transition:all 0.2s"
+               font-size:16px;width:100%;outline:none;font-family:'Inter',sans-serif;transition:all 0.2s"
         onfocus="this.style.borderColor='var(--accent)'"
         onblur="this.style.borderColor='var(--border)'"
         onkeydown="if(event.key==='Enter') confirmRename()">
@@ -1688,7 +1715,7 @@ function confirmRename() {
 <div id="mensalidade" class="screen">
   <div class="topbar">
     <div class="tb-row1">
-      <div class="tb-brand"><div class="tb-icon">⚡</div>Tarifa<span>Pay</span></div>
+      <div class="tb-brand"><div class="tb-icon">🎮</div>Diverti<span>Pay</span></div>
       <button class="tb-back" onclick="goTo('devices')">← Voltar</button>
     </div>
   </div>
@@ -1703,11 +1730,11 @@ function confirmRename() {
       <div style="width:48px;height:48px;border-radius:14px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">📋</div>
       <div style="flex:1">
         <div style="font-size:13px;color:var(--muted);margin-bottom:2px">Plano atual</div>
-        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800" id="m-plan-name">Plano Mensal</div>
+        <div style="font-family:'Inter',sans-serif;font-size:16px;font-weight:800" id="m-plan-name">Plano Mensal</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">Vence em <span id="m-days-left" style="font-weight:700;color:var(--accent)">21 dias</span></div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--green)" id="m-price">R$120</div>
+        <div style="font-family:'Inter',sans-serif;font-size:24px;font-weight:800;color:var(--green)" id="m-price">R$120</div>
         <div style="font-size:11px;color:var(--muted)">por 30 dias</div>
       </div>
     </div>
@@ -1785,7 +1812,7 @@ function confirmRename() {
                 border-radius:16px;padding:24px;text-align:center;margin-bottom:20px">
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;
                   letter-spacing:0.6px;margin-bottom:8px">Total detectado pelo noteiro</div>
-      <div style="font-family:'Syne',sans-serif;font-size:42px;font-weight:800;
+      <div style="font-family:'Inter',sans-serif;font-size:42px;font-weight:800;
                   color:#15803d;line-height:1" id="cm-value">R$0</div>
       <div style="font-size:11px;color:var(--muted);margin-top:8px">
         Contador independente — não entra nas vendas
@@ -1805,7 +1832,7 @@ function confirmRename() {
     </div>
     <button onclick="showToast('Configurações do noteiro — em breve')"
       style="width:100%;margin-top:10px;padding:12px;border-radius:12px;border:1.5px solid var(--border);
-             background:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;
+             background:none;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;
              color:var(--muted);cursor:pointer">⚙️ Configurar Noteiro</button>
   </div>
 </div>
@@ -1819,7 +1846,7 @@ function confirmRename() {
 
     <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:14px;padding:18px;margin-bottom:20px;text-align:center">
       <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Lançamentos pendentes</div>
-      <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--green)" id="baixa-count">0</div>
+      <div style="font-family:'Inter',sans-serif;font-size:28px;font-weight:800;color:var(--green)" id="baixa-count">0</div>
       <div style="font-size:13px;color:var(--muted);margin-top:4px">Total: <strong id="baixa-total" style="color:var(--text)">R$0</strong></div>
     </div>
 
