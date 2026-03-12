@@ -126,5 +126,20 @@ app.post('/webhook/esp32', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
+  // ── ROTA MASTER — lista todos os clientes com aparelhos ──
+app.get('/master/clients', async (req, res) => {
+  try {
+    const [clientes] = await db.query('SELECT * FROM clientes ORDER BY nome');
+    for (const c of clientes) {
+      const [aparelhos] = await db.query(
+        'SELECT * FROM aparelhos WHERE cliente_id = ?', [c.id]
+      );
+      c.aparelhos = aparelhos;
+    }
+    res.json(clientes);
+  } catch (e) {
+    res.status(500).json({ erro: e.message });
+  }
+});
   console.log('DivertiPay rodando na porta', PORT);
 });
