@@ -76,10 +76,10 @@ app.get('/devices', auth, async (req, res) => {
 
 app.post('/devices', auth, async (req, res) => {
   try {
-    const { nome } = req.body;
+    const { nome, mp_user_id } = req.body;
     if (!nome) return res.status(400).json({ erro: 'Nome obrigatório' });
     const token = crypto.randomBytes(16).toString('hex');
-    await db.query('INSERT INTO aparelhos (cliente_id, nome, token) VALUES (?, ?, ?)', [req.user.id, nome, token]);
+    await db.query('INSERT INTO aparelhos (cliente_id, nome, token, mp_user_id) VALUES (?, ?, ?, ?)', [req.user.id, nome, token, mp_user_id || null]);
     res.json({ ok: true, token, mensagem: 'Aparelho criado!' });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
@@ -87,6 +87,13 @@ app.post('/devices', auth, async (req, res) => {
 app.put('/devices/:id/name', auth, async (req, res) => {
   try {
     await db.query('UPDATE aparelhos SET nome = ? WHERE id = ? AND cliente_id = ?', [req.body.nome, req.params.id, req.user.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+app.put('/devices/:id/mpid', auth, async (req, res) => {
+  try {
+    await db.query('UPDATE aparelhos SET mp_user_id = ? WHERE id = ?', [req.body.mp_user_id, req.params.id]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
