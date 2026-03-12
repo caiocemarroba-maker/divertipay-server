@@ -235,7 +235,7 @@ app.post('/devices/:id/pulse', auth, async (req, res) => {
     console.log('Pulso enfileirado:', rows[0].nome, 'pulsos:', pulsos);
     await db.query(
       'INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, ?, ?)',
-      [rows[0].id, 'pix', pulsos * 10]
+      [rows[0].id, 'pix', pulsos]
     );
     res.json({ ok: true, cmdId });
   } catch (e) { res.status(500).json({ erro: e.message }); }
