@@ -1,137 +1,389 @@
-require('dotenv').config();
-const express = require('express');
-const cors    = require('cors');
-const mysql   = require('mysql2/promise');
-const bcrypt  = require('bcryptjs');
-const jwt     = require('jsonwebtoken');
-const crypto  = require('crypto');
-const app     = express();
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DivertiPay — Painel do Cliente</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg:     #f4f6f9;
+    --card:   #ffffff;
+    --border: #e8ecf0;
+    --text:   #1a1a2e;
+    --muted:  #8a94a6;
+    --accent: #f97316;
+    --green:  #22c55e;
+    --red:    #ef4444;
+    --yellow: #f59e0b;
+  }
 
-app.use(cors());
-app.use(express.json());
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
-const db = mysql.createPool({
-  host:     process.env.DB_HOST,
-  port:     process.env.DB_PORT,
-  user:     process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
 
-// Fila de pulsos em memória
-const filaPulsos = {};
+  .screen { display:none; min-height:100vh; flex-direction:column; }
+  .screen.active { display:flex; }
 
-function auth(req, res, next) {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ erro: 'Sem token' });
-  try { req.user = jwt.verify(token, process.env.JWT_SECRET); next(); }
-  catch { res.status(401).json({ erro: 'Token invalido' }); }
-}
+  /* --- LOGIN --- */
+  #login { align-items:center; justify-content:center; padding:20px; }
+  .login-card {
+    background:var(--card); width:100%; max-width:360px; padding:32px;
+    border-radius:24px; box-shadow:0 10px 25px rgba(0,0,0,0.05); text-align:center;
+  }
+  .login-card h2 { font-size:24px; font-weight:800; margin-bottom:8px; }
+  .login-card p { color:var(--muted); font-size:14px; margin-bottom:24px; }
+  .input-group { text-align:left; margin-bottom:16px; }
+  .input-group label { display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px; }
+  .input-group input {
+    width:100%; padding:12px 16px; border:1.5px solid var(--border); border-radius:12px;
+    font-size:15px; font-family:inherit; outline:none; transition:0.2s;
+  }
+  .input-group input:focus { border-color:var(--accent); }
+  .btn-primary {
+    width:100%; padding:14px; border:none; border-radius:12px; background:linear-gradient(135deg,#f97316,#ea580c);
+    color:#fff; font-size:15px; font-weight:700; cursor:pointer; margin-top:8px;
+  }
 
-// --- ROTAS DE DISPOSITIVOS ---
+  /* --- APP / HEADER --- */
+  header {
+    background:var(--card); padding:16px 20px; display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1.5px solid var(--border); position:sticky; top:0; z-index:10;
+  }
+  .user-info h1 { font-size:16px; font-weight:700; }
+  .user-info p { font-size:12px; color:var(--muted); }
 
-app.get('/devices', auth, async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      'SELECT id, nome, token, mp_user_id, online, updated_at FROM aparelhos WHERE cliente_id = ?',
-      [req.user.id]
-    );
+  .content { padding:20px; flex:1; max-width:800px; margin:0 auto; width:100%; }
 
-    // LÓGICA DE STATUS REAL-TIME
-    const agora = new Date();
-    const aparelhosProcessados = rows.map(dev => {
-      const ultimaVez = new Date(dev.updated_at);
-      const diferencaSegundos = (agora - ultimaVez) / 1000;
+  /* --- CARDS DE APARELHOS --- */
+  .section-title { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; }
+  
+  .device-card {
+    background:var(--card); border-radius:20px; padding:18px; margin-bottom:12px;
+    border:1.5px solid var(--border); display:flex; align-items:center; gap:16px; position:relative;
+  }
+  .device-icon {
+    width:48px; height:48px; border-radius:14px; background:rgba(249,115,22,0.1);
+    display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--accent);
+  }
+  .device-info { flex:1; }
+  .device-info h3 { font-size:15px; font-weight:700; margin-bottom:2px; }
+  .device-status { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:600; }
+  .status-dot { width:7px; height:7px; border-radius:50%; }
+  
+  .dot-online { background:var(--green); box-shadow:0 0 8px var(--green); }
+  .dot-offline { background:var(--red); }
+  
+  .btn-pulse {
+    padding:10px 16px; border:none; border-radius:10px; background:var(--accent); color:#fff;
+    font-size:13px; font-weight:700; cursor:pointer;
+  }
+
+  /* --- MODAL --- */
+  .modal-overlay {
+    position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4);
+    backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; padding:20px; z-index:100;
+  }
+  .modal {
+    background:var(--card); width:100%; max-width:400px; border-radius:24px; padding:24px;
+    box-shadow:0 20px 40px rgba(0,0,0,0.15); position:relative;
+  }
+  .modal-close { position:absolute; top:16px; right:16px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--muted); }
+
+  /* Botão Copiar Estilizado */
+  .btn-copy {
+    margin-top:8px; padding:7px 14px; border:1.5px solid rgba(249,115,22,0.3); 
+    border-radius:8px; background:rgba(249,115,22,0.06); font-size:12px; 
+    font-weight:600; color:#f97316; cursor:pointer; font-family:'Inter',sans-serif;
+    transition: all 0.2s;
+  }
+  .btn-copy:active { transform: scale(0.95); }
+
+</style>
+</head>
+<body>
+
+  <div id="login" class="screen active">
+    <div class="login-card">
+      <div style="font-size:40px; margin-bottom:10px">🎯</div>
+      <h2>DivertiPay</h2>
+      <p>Acesse seu painel de controle</p>
       
-      // Se não enviou sinal há mais de 10 segundos, força offline
-      return {
-        ...dev,
-        online: (dev.online === 1 && diferencaSegundos < 10) ? 1 : 0
-      };
-    });
+      <div class="input-group">
+        <label>E-mail</label>
+        <input type="email" id="login-email" placeholder="seu@email.com">
+      </div>
+      <div class="input-group">
+        <label>Senha</label>
+        <input type="password" id="login-senha" placeholder="••••••••">
+      </div>
+      
+      <button class="btn-primary" onclick="fazerLogin()">Entrar agora</button>
+      
+      <p style="margin-top:20px; font-size:12px">
+        Não tem conta? <a href="#" onclick="abrirCadastro()" style="color:var(--accent); font-weight:700; text-decoration:none">Cadastre-se</a>
+      </p>
+    </div>
+  </div>
 
-    res.json(aparelhosProcessados);
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
+  <div id="app" class="screen">
+    <header>
+      <div class="user-info">
+        <p>Olá, <span id="user-name-display">...</span></p>
+        <h1 id="user-plan-status">Plano Ativo</h1>
+      </div>
+      <button onclick="logout()" style="background:none; border:none; color:var(--red); font-weight:700; font-size:12px">SAIR</button>
+    </header>
 
-app.post('/devices', auth, async (req, res) => {
-  try {
-    const { nome } = req.body;
-    const token = crypto.randomBytes(16).toString('hex');
-    await db.query(
-      'INSERT INTO aparelhos (cliente_id, nome, token) VALUES (?, ?, ?)',
-      [req.user.id, nome, token]
-    );
-    res.json({ ok: true, token });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
+    <div class="content">
+      <div class="section-title">
+        <span>Meus Aparelhos</span>
+        <button onclick="abrirNovoAparelho()" style="background:none; border:none; color:var(--accent); font-weight:700; font-size:12px">+ ADICIONAR</button>
+      </div>
 
-// Enviar pulso do painel para o ESP
-app.post('/devices/:id/pulse', auth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { pulsos } = req.body;
-    const [rows] = await db.query('SELECT token FROM aparelhos WHERE id = ? AND cliente_id = ?', [id, req.user.id]);
-    
-    if (rows.length === 0) return res.status(404).json({ erro: 'Aparelho não encontrado' });
-    
-    const token = rows[0].token;
-    if (!filaPulsos[token]) filaPulsos[token] = [];
-    
-    const cmdId = Date.now();
-    filaPulsos[token].push({ id: cmdId, pulsos: parseInt(pulsos) });
+      <div id="lista-aparelhos">
+        </div>
+    </div>
+  </div>
 
-    // Registra como pagamento do tipo 'painel'
-    await db.query(
-      'INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, ?, ?)',
-      [id, 'pix', pulsos]
-    );
+  <div id="modal-novo" class="modal-overlay">
+    <div class="modal">
+      <button class="modal-close" onclick="fecharModais()">×</button>
+      <h3 style="margin-bottom:20px">Novo Aparelho</h3>
+      <div class="input-group">
+        <label>Nome do Aparelho</label>
+        <input type="text" id="novo-nome" placeholder="Ex: Máquina 01">
+      </div>
+      <button class="btn-primary" onclick="cadastrarAparelho()">Cadastrar</button>
+    </div>
+  </div>
 
-    res.json({ ok: true, cmdId });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
+  <div id="modal-config" class="modal-overlay">
+    <div class="modal">
+      <button class="modal-close" onclick="fecharModais()">×</button>
+      <h3 id="config-nome-title" style="margin-bottom:4px">Configurar</h3>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:20px">Ajuste as definições do seu hardware</p>
+      
+      <div class="input-group">
+        <label>Nome</label>
+        <input type="text" id="inp-config-nome">
+      </div>
+      <div class="input-group">
+        <label>Mercado Pago User ID</label>
+        <input type="text" id="inp-config-mpid" placeholder="ID da sua conta MP">
+      </div>
 
-// --- ROTAS DO ESP (POLLING) ---
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:11px;font-weight:600;color:#8a94a6;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px">Token do firmware</label>
+        <div id="config-token-display" style="background:#f4f6f9;border:1px solid #e8ecf0;border-radius:10px;padding:10px 12px;font-family:'Courier New',monospace;font-size:11px;color:#374151;word-break:break-all;line-height:1.6"></div>
+        <button onclick="copiarTokenConfig(event)" class="btn-copy">📋 Copiar token</button>
+      </div>
 
-app.get('/esp/comando', async (req, res) => {
-  try {
-    const { token } = req.query;
-    if (!token) return res.status(400).json({ erro: 'Token obrigatorio' });
+      <button class="btn-primary" onclick="salvarConfig()">Salvar Alterações</button>
+    </div>
+  </div>
 
-    // Atualiza o timestamp de atividade e marca online
-    await db.query('UPDATE aparelhos SET online = 1, updated_at = NOW() WHERE token = ?', [token]);
+  <script>
+    const API_URL = 'https://divertipay-server-production.up.railway.app';
+    let token = localStorage.getItem('token_diverti');
+    let aparelhosCache = [];
+    let deviceEmConfig = null;
 
-    const fila = filaPulsos[token];
-    if (fila && fila.length > 0) {
-      const cmd = fila.shift();
-      return res.json({ tem_comando: true, pulsos: cmd.pulsos, id: cmd.id });
+    // --- INICIALIZAÇÃO ---
+    if (token) {
+      document.getElementById('login').classList.remove('active');
+      document.getElementById('app').classList.add('active');
+      carregarDados();
+      setInterval(carregarAparelhos, 3000); // Polling de status a cada 3s
     }
-    res.json({ tem_comando: false });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
 
-app.post('/esp/confirmar', async (req, res) => {
-  try {
-    const { token } = req.body;
-    await db.query('UPDATE aparelhos SET online = 1, updated_at = NOW() WHERE token = ?', [token]);
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
-
-// Rota para o noteiro reportar nota
-app.post('/webhook/esp32', async (req, res) => {
-    try {
-      const { token, valor } = req.body;
-      const [rows] = await db.query('SELECT id FROM aparelhos WHERE token = ?', [token]);
-      if (rows.length === 0) return res.status(404).json({ erro: 'Aparelho invalido' });
+    // --- AUTH ---
+    async function fazerLogin() {
+      const email = document.getElementById('login-email').value;
+      const senha = document.getElementById('login-senha').value;
       
-      await db.query(
-        'INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, "noteiro", ?)',
-        [rows[0].id, valor]
-      );
-      res.json({ ok: true });
-    } catch (e) { res.status(500).json({ erro: e.message }); }
-});
+      try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha })
+        });
+        const data = await res.json();
+        if (data.token) {
+          localStorage.setItem('token_diverti', data.token);
+          location.reload();
+        } else {
+          alert(data.erro || 'Erro ao logar');
+        }
+      } catch (e) { alert('Erro de conexão'); }
+    }
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+    function logout() {
+      localStorage.removeItem('token_diverti');
+      location.reload();
+    }
+
+    // --- DADOS ---
+    async function carregarDados() {
+      try {
+        const res = await fetch(`${API_URL}/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.nome) {
+          document.getElementById('user-name-display').innerText = data.nome.split(' ')[0];
+          carregarAparelhos();
+        } else {
+          logout();
+        }
+      } catch (e) { logout(); }
+    }
+
+    async function carregarAparelhos() {
+      try {
+        const res = await fetch(`${API_URL}/devices`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        aparelhosCache = data;
+        renderizarAparelhos();
+      } catch (e) {}
+    }
+
+    function renderizarAparelhos() {
+      const lista = document.getElementById('lista-aparelhos');
+      if (aparelhosCache.length === 0) {
+        lista.innerHTML = `<div style="text-align:center; padding:40px; color:var(--muted); font-size:14px">Nenhum aparelho cadastrado.</div>`;
+        return;
+      }
+
+      lista.innerHTML = aparelhosCache.map(dev => `
+        <div class="device-card">
+          <div class="device-icon" onclick="abrirConfig(${dev.id})">🕹️</div>
+          <div class="device-info" onclick="abrirConfig(${dev.id})">
+            <h3>${dev.nome}</h3>
+            <div class="device-status">
+              <div class="status-dot ${dev.online ? 'dot-online' : 'dot-offline'}"></div>
+              <span style="color: ${dev.online ? 'var(--green)' : 'var(--red)'}">
+                ${dev.online ? 'ONLINE' : 'OFFLINE'}
+              </span>
+            </div>
+          </div>
+          <button class="btn-pulse" onclick="enviarCredito(${dev.id})">ENVIAR CRÉDITO</button>
+        </div>
+      `).join('');
+    }
+
+    async function enviarCredito(id) {
+      const pulsos = prompt("Quantos pulsos (créditos) deseja enviar?", "1");
+      if (!pulsos) return;
+
+      try {
+        const res = await fetch(`${API_URL}/devices/${id}/pulse`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` 
+          },
+          body: JSON.stringify({ pulsos })
+        });
+        const data = await res.json();
+        if (data.ok) alert("Comando enviado! Aguardando o aparelho processar.");
+        else alert(data.erro);
+      } catch (e) { alert("Erro ao enviar comando"); }
+    }
+
+    // --- MODAIS E CONFIG ---
+    function abrirNovoAparelho() { document.getElementById('modal-novo').style.display = 'flex'; }
+
+    async function cadastrarAparelho() {
+      const nome = document.getElementById('novo-nome').value;
+      if (!nome) return;
+      try {
+        const res = await fetch(`${API_URL}/devices`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` 
+          },
+          body: JSON.stringify({ nome })
+        });
+        fecharModais();
+        carregarAparelhos();
+      } catch (e) { alert("Erro ao cadastrar"); }
+    }
+
+    function abrirConfig(id) {
+      const dev = aparelhosCache.find(a => a.id === id);
+      if (!dev) return;
+
+      deviceEmConfig = id;
+      document.getElementById('config-nome-title').innerText = dev.nome;
+      document.getElementById('inp-config-nome').value = dev.nome;
+      document.getElementById('inp-config-mpid').value = dev.mp_user_id || '';
+      
+      // EXIBE O TOKEN NO MODAL
+      document.getElementById('config-token-display').innerText = dev.token;
+
+      document.getElementById('modal-config').style.display = 'flex';
+    }
+
+    // CORREÇÃO: FUNÇÃO DE COPIAR TOKEN
+    function copiarTokenConfig(event) {
+      const tokenText = document.getElementById('config-token-display').innerText;
+      if (!tokenText) return;
+
+      navigator.clipboard.writeText(tokenText).then(() => {
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.innerText = "✅ Copiado!";
+        btn.style.color = "#22c55e";
+        
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.color = "#f97316";
+        }, 2000);
+      }).catch(err => {
+        // Fallback para navegadores que não suportam clipboard API
+        const textArea = document.createElement("textarea");
+        textArea.value = tokenText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          alert("Token copiado!");
+        } catch (err) {
+          alert("Erro ao copiar: " + err);
+        }
+        document.body.removeChild(textArea);
+      });
+    }
+
+    async function salvarConfig() {
+      const nome = document.getElementById('inp-config-nome').value;
+      const mp_user_id = document.getElementById('inp-config-mpid').value;
+      
+      // Aqui você pode adicionar as chamadas de PUT para renomear e mudar MPID
+      // conforme as rotas que já existem no seu server.js
+      alert("Configurações salvas (Lógica de API pendente para MPID)");
+      fecharModais();
+      carregarAparelhos();
+    }
+
+    function fecharModais() {
+      document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+    }
+
+    window.onclick = function(event) {
+      if (event.target.className === 'modal-overlay') fecharModais();
+    };
+
+  </script>
+</body>
+</html>
