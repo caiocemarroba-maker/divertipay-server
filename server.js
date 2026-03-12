@@ -32,6 +32,19 @@ app.get('/db-test', async (req, res) => {
   res.json({ tabelas: rows });
 });
 
+// ── MIGRAÇÃO AUTOMÁTICA ─────────────────────────────────────
+async function migrarBanco() {
+  try {
+    await db.query("ALTER TABLE aparelhos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    console.log("[DB] updated_at OK");
+    await db.query("ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'confirmado'");
+    console.log("[DB] status OK");
+    await db.query("ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS recolhido TINYINT(1) DEFAULT 0");
+    console.log("[DB] recolhido OK");
+  } catch(e) { console.error("[DB] Migracao:", e.message); }
+}
+migrarBanco();
+
 // ── AUTH ─────────────────────────────────────────────────────
 
 app.post('/auth/login', async (req, res) => {
@@ -127,6 +140,14 @@ app.put('/devices/:id/mpid', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+app.delete('/devices/:id', auth, async (req, res) => {
+  try {
+    await db.query('DELETE FROM pagamentos WHERE aparelho_id = ?', [req.params.id]);
+    await db.query('DELETE FROM aparelhos WHERE id = ? AND cliente_id = ?', [req.params.id, req.user.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 // ── PAYMENTS ─────────────────────────────────────────────────
 
 app.get('/payments', auth, async (req, res) => {
@@ -191,19 +212,20 @@ app.post('/master/add-days', async (req, res) => {
 app.post('/master/config-cliente', async (req, res) => {
   try {
     const { cliente_id, mensalidade_valor, mensalidade_dias, bloquear_vencer } = req.body;
-    console.log('config-cliente:', { cliente_id, mensalidade_valor, mensalidade_dias, bloquear_vencer });
+    console.log('config-cliente recebido:', { cliente_id, mensalidade_valor, mensalidade_dias, bloquear_vencer });
+    if (!cliente_id) return res.status(400).json({ erro: 'cliente_id obrigatorio' });
     await db.query(
       'UPDATE clientes SET mensalidade_valor = ?, mensalidade_dias = ?, bloquear_vencer = ? WHERE id = ?',
       [mensalidade_valor || 0, mensalidade_dias || 30, bloquear_vencer ? 1 : 0, cliente_id]
     );
     res.json({ ok: true });
   } catch (e) {
-    console.error('config-cliente erro:', e.message);
+    console.error('config-cliente ERRO:', e.message);
     res.status(500).json({ erro: e.message });
   }
 });
 
-// ── WEBHOOK NOTEIRO (ESP32) ───────────────────────────────────
+// ── WEBHOOK NOTEIRO (ESP) ─────────────────────────────────────
 
 app.post('/webhook/esp32', async (req, res) => {
   try {
@@ -211,7 +233,7 @@ app.post('/webhook/esp32', async (req, res) => {
     const [aparelhos] = await db.query('SELECT * FROM aparelhos WHERE token = ?', [token]);
     if (!aparelhos.length) return res.status(404).json({ erro: 'Aparelho nao encontrado' });
 
-    // ✅ status = 'confirmado' para aparecer no painel
+    // FIX: status='confirmado' para aparecer corretamente no painel
     await db.query(
       'INSERT INTO pagamentos (aparelho_id, tipo, valor, status) VALUES (?, ?, ?, ?)',
       [aparelhos[0].id, tipo || 'noteiro', valor, 'confirmado']
@@ -231,7 +253,7 @@ const filaPulsos = {};
 
 app.post('/devices/:id/pulse', auth, async (req, res) => {
   try {
-    const { pulsos, valor_unitario } = req.body;
+    const { pulsos, valor } = req.body;
     if (!pulsos || pulsos < 1) return res.status(400).json({ erro: 'Pulsos invalido' });
 
     const [rows] = await db.query(
@@ -244,13 +266,13 @@ app.post('/devices/:id/pulse', auth, async (req, res) => {
     if (!filaPulsos[token]) filaPulsos[token] = [];
     const cmdId = Date.now();
     filaPulsos[token].push({ pulsos, id: cmdId });
-    console.log('Pulso enfileirado:', rows[0].nome, 'pulsos:', pulsos);
+    console.log('Pulso enfileirado:', rows[0].nome, 'pulsos:', pulsos, 'valor:', valor);
 
-    // ✅ Usa valor_unitario enviado pelo painel, ou 1.00 como fallback
-    const valorTotal = (valor_unitario || 1.00) * pulsos;
+    // FIX: salva o valor em R$ real (enviado pelo painel), nao a qtd de pulsos
+    const valorReal = parseFloat(valor) || 0;
     await db.query(
       'INSERT INTO pagamentos (aparelho_id, tipo, valor, status) VALUES (?, ?, ?, ?)',
-      [rows[0].id, 'pix', valorTotal, 'confirmado']
+      [rows[0].id, 'pix', valorReal, 'confirmado']
     );
 
     res.json({ ok: true, cmdId });
@@ -263,7 +285,7 @@ app.get('/esp/comando', async (req, res) => {
   try {
     const { token } = req.query;
     if (!token) return res.status(400).json({ erro: 'Token obrigatorio' });
-    // ✅ Atualiza online=1 E updated_at para o setInterval detectar offline corretamente
+    // FIX: atualiza updated_at para o setInterval detectar offline corretamente
     await db.query('UPDATE aparelhos SET online = 1, updated_at = NOW() WHERE token = ?', [token]);
     const fila = filaPulsos[token];
     if (fila && fila.length > 0) {
@@ -278,13 +300,12 @@ app.get('/esp/comando', async (req, res) => {
 app.post('/esp/confirmar', async (req, res) => {
   try {
     const { token } = req.body;
-    // ✅ Atualiza updated_at na confirmação também
     await db.query('UPDATE aparelhos SET online = 1, updated_at = NOW() WHERE token = ?', [token]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ✅ Marca offline aparelhos sem heartbeat há mais de 30s
+// Marca offline aparelhos sem heartbeat ha mais de 30s
 setInterval(async () => {
   try {
     await db.query("UPDATE aparelhos SET online = 0 WHERE updated_at < NOW() - INTERVAL 30 SECOND");
