@@ -554,11 +554,16 @@ async function carregarClientes() {
 function doLogout() { goTo('login'); }
 
 // ── ACESSAR PAINEL DO CLIENTE ──
-function acessarPainel(email) {
-  const url = window.location.href.replace('painel_master', 'painel_cliente')
-                                   .replace('painel_master%20(1)', 'painel_cliente%20(1)');
+async function acessarPainel(clienteId, email) {
   showToast('Abrindo painel...');
-  setTimeout(() => window.open(url + '?email=' + encodeURIComponent(email), '_blank'), 500);
+  // Buscar token do cliente via rota master
+  const data = await api('GET', '/master/client-token/' + clienteId);
+  if (!data.token) { showToast('Erro ao acessar painel'); return; }
+  const base = window.location.href
+    .replace(/painel_master.*/, '')
+    .replace(/\?.*/, '');
+  const clienteUrl = base + 'painel_cliente%20(1).html?master=1&token=' + encodeURIComponent(data.token);
+  setTimeout(() => window.open(clienteUrl, '_blank'), 300);
 }
 
 // ── CADASTRAR NOVO CLIENTE ──
@@ -661,7 +666,7 @@ function renderClients() {
         <div class="client-devices" id="devs-${ci}">
           ${devRows}
           <div style="padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)">
-            <button class="btn-access" onclick="acessarPainel('${c.email}')">
+            <button class="btn-access" onclick="acessarPainel(${c.id},'${c.email}')">
               Acessar Painel →
             </button>
           </div>
@@ -689,7 +694,7 @@ function renderVencimentos() {
           <div class="venc-date">${c.devices.length} aparelhos · ${c.plat} · ${c.email}</div>
         </div>
         <span class="pill ${pillClass}">${pillTxt}</span>
-        <button class="btn-access" onclick="acessarPainel('${c.email}')">Painel →</button>
+        <button class="btn-access" onclick="acessarPainel(${c.id},'${c.email}')">Painel →</button>
       </div>`;
   }).join('');
 }
@@ -745,7 +750,6 @@ async function confirmAddDays() {
   } else {
     showToast(data.erro || 'Erro ao adicionar dias');
   }
-}
 }
 
 document.getElementById('modal-days').addEventListener('click', function(e) {
