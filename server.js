@@ -60,7 +60,10 @@ app.post('/auth/cadastro', async (req, res) => {
 // Retorna dados do usuário logado (usado pelo painel cliente quando acessado via master)
 app.get('/auth/me', auth, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT id, nome, email, plano_expira FROM clientes WHERE id = ?', [req.user.id]);
+    const [rows] = await db.query(
+      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias FROM clientes WHERE id = ?',
+      [req.user.id]
+    );
     if (!rows.length) return res.status(404).json({ erro: 'Não encontrado' });
     res.json(rows[0]);
   } catch (e) { res.status(500).json({ erro: e.message }); }
@@ -115,12 +118,23 @@ app.get('/payments', auth, async (req, res) => {
 // ── MASTER ──
 app.get('/master/clients', async (req, res) => {
   try {
-    const [clientes] = await db.query('SELECT * FROM clientes ORDER BY nome');
+    const [clientes] = await db.query('SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias FROM clientes ORDER BY nome');
     for (const c of clientes) {
       const [aparelhos] = await db.query('SELECT * FROM aparelhos WHERE cliente_id = ?', [c.id]);
       c.aparelhos = aparelhos;
     }
     res.json(clientes);
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+app.post('/master/config-cliente', async (req, res) => {
+  try {
+    const { cliente_id, mensalidade_valor, mensalidade_dias } = req.body;
+    await db.query(
+      'UPDATE clientes SET mensalidade_valor = ?, mensalidade_dias = ? WHERE id = ?',
+      [mensalidade_valor || 0, mensalidade_dias || 30, cliente_id]
+    );
+    res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
@@ -138,6 +152,14 @@ app.post('/master/add-days', async (req, res) => {
   try {
     const { cliente_id, dias } = req.body;
     await db.query(`UPDATE clientes SET plano_expira = DATE_ADD(GREATEST(plano_expira, CURDATE()), INTERVAL ? DAY) WHERE id = ?`, [dias, cliente_id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+app.post('/master/config-cliente', async (req, res) => {
+  try {
+    const { cliente_id, mensalidade } = req.body;
+    await db.query('UPDATE clientes SET mensalidade = ? WHERE id = ?', [mensalidade, cliente_id]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
