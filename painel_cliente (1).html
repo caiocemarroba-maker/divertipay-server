@@ -708,26 +708,29 @@ window.addEventListener('DOMContentLoaded', async function() {
 
 async function carregarDados() {
   showToast('Carregando...');
-  const devData = await api('GET', '/devices');
-  devices = (devData || []).map(d => ({
-    id:     String(d.id),
-    name:   d.nome,
-    token:  d.token || '',
-    mpId:   d.mp_user_id || '—',
-    status: d.online ? 'online' : 'offline',
-    today:  0, sales: 0, total: 0,
-    cash:   parseFloat(d.noteiro_total) || 0
-  }));
-  const from = document.getElementById('f-start')?.value || '2000-01-01';
-  const to   = document.getElementById('f-end')?.value   || '2099-12-31';
-  const payData = await api('GET', `/payments?from=2000-01-01&to=2099-12-31`);
-  allPayments = (payData || []).map(p => ({
+  try {
+    const devData = await api('GET', '/devices');
+    if (!Array.isArray(devData)) {
+      showToast('Erro ao carregar aparelhos: ' + (devData?.erro || 'resposta invalida'));
+      devices = []; renderDevices(); return;
+    }
+    devices = devData.map(d => ({
+      id:     String(d.id),
+      name:   d.nome,
+      token:  d.token || '',
+      mpId:   d.mp_user_id || '—',
+      status: d.online ? 'online' : 'offline',
+      today:  0, sales: 0, total: 0,
+      cash:   parseFloat(d.noteiro_total) || 0
+    }));
+    const payData = await api('GET', `/payments?from=2000-01-01&to=2099-12-31`);
+    allPayments = (Array.isArray(payData) ? payData : []).map(p => ({
     id:        p.id,
     device:    p.aparelho_nome,
     val:       parseFloat(p.valor),
     method:    p.tipo === 'pix' ? 'PIX' : p.tipo === 'cartao' ? 'Cartão' : 'Noteiro',
     date:      p.criado_em?.replace('T',' ').substring(0,16) || '',
-    ok:        p.status === 'confirmado',
+    ok:        p.status === 'confirmado' || p.status === null || p.status === undefined || p.status === '',
     tipo:      'normal',
     recolhido: !!p.recolhido
   }));
@@ -743,9 +746,14 @@ async function carregarDados() {
     if (p.date.startsWith(hoje)) dev.today += p.val;
   });
 
-  filteredPayments = [...allPayments];
-  renderDevices();
-  renderPayments(allPayments);
+    filteredPayments = [...allPayments];
+    renderDevices();
+    renderPayments(allPayments);
+  } catch(e) {
+    console.error('carregarDados erro:', e);
+    showToast('Erro de conexao ao carregar dados');
+    devices = []; renderDevices();
+  }
 }
 
 // ── NOVO APARELHO ──
