@@ -18,6 +18,9 @@ const db = mysql.createPool({
   database: process.env.DB_NAME,
 });
 
+// Fila de pulsos em memória
+const filaPulsos = {};
+
 function auth(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ erro: 'Sem token' });
@@ -25,253 +28,110 @@ function auth(req, res, next) {
   catch { res.status(401).json({ erro: 'Token invalido' }); }
 }
 
-app.get('/', (req, res) => res.json({ status: 'ok', projeto: 'DivertiPay' }));
-
-app.get('/db-test', async (req, res) => {
-  const [rows] = await db.query('SHOW TABLES');
-  res.json({ tabelas: rows });
-});
-
-app.post('/auth/login', async (req, res) => {
-  try {
-    const { email, senha } = req.body;
-    const [rows] = await db.query('SELECT * FROM clientes WHERE email = ?', [email]);
-    if (!rows.length) return res.status(401).json({ erro: 'Email ou senha incorretos' });
-    const ok = await bcrypt.compare(senha, rows[0].senha_hash);
-    if (!ok) return res.status(401).json({ erro: 'Email ou senha incorretos' });
-    if (rows[0].bloquear_vencer) {
-      const expira = new Date(rows[0].plano_expira);
-      if (expira < new Date()) {
-        return res.status(403).json({ erro: 'Acesso bloqueado. Plano vencido. Entre em contato com o suporte.' });
-      }
-    }
-    const token = jwt.sign(
-      { id: rows[0].id, nome: rows[0].nome, email: rows[0].email },
-      process.env.JWT_SECRET, { expiresIn: '7d' }
-    );
-    res.json({ token, nome: rows[0].nome, plano_expira: rows[0].plano_expira });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
-
-app.post('/auth/cadastro', async (req, res) => {
-  try {
-    const { nome, email, senha } = req.body;
-    if (!nome || !email || !senha) return res.status(400).json({ erro: 'Preencha todos os campos' });
-    const hash   = await bcrypt.hash(senha, 10);
-    const expira = new Date();
-    expira.setDate(expira.getDate() + 30);
-    await db.query(
-      'INSERT INTO clientes (nome, email, senha_hash, plano_expira) VALUES (?, ?, ?, ?)',
-      [nome, email, hash, expira]
-    );
-    res.json({ ok: true });
-  } catch (e) {
-    if (e.code === 'ER_DUP_ENTRY') return res.status(400).json({ erro: 'Email ja cadastrado' });
-    res.status(500).json({ erro: e.message });
-  }
-});
-
-app.get('/auth/me', auth, async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias, bloquear_vencer FROM clientes WHERE id = ?',
-      [req.user.id]
-    );
-    if (!rows.length) return res.status(404).json({ erro: 'Nao encontrado' });
-    res.json(rows[0]);
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
+// --- ROTAS DE DISPOSITIVOS ---
 
 app.get('/devices', auth, async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT id, nome, token, mp_user_id, online, noteiro_total FROM aparelhos WHERE cliente_id = ?',
+      'SELECT id, nome, token, mp_user_id, online, updated_at FROM aparelhos WHERE cliente_id = ?',
       [req.user.id]
     );
-    res.json(rows);
+
+    // LÓGICA DE STATUS REAL-TIME
+    const agora = new Date();
+    const aparelhosProcessados = rows.map(dev => {
+      const ultimaVez = new Date(dev.updated_at);
+      const diferencaSegundos = (agora - ultimaVez) / 1000;
+      
+      // Se não enviou sinal há mais de 10 segundos, força offline
+      return {
+        ...dev,
+        online: (dev.online === 1 && diferencaSegundos < 10) ? 1 : 0
+      };
+    });
+
+    res.json(aparelhosProcessados);
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
 app.post('/devices', auth, async (req, res) => {
   try {
-    const { nome, mp_user_id } = req.body;
-    if (!nome) return res.status(400).json({ erro: 'Nome obrigatorio' });
+    const { nome } = req.body;
     const token = crypto.randomBytes(16).toString('hex');
     await db.query(
-      'INSERT INTO aparelhos (cliente_id, nome, token, mp_user_id) VALUES (?, ?, ?, ?)',
-      [req.user.id, nome, token, mp_user_id || null]
+      'INSERT INTO aparelhos (cliente_id, nome, token) VALUES (?, ?, ?)',
+      [req.user.id, nome, token]
     );
     res.json({ ok: true, token });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-app.put('/devices/:id/name', auth, async (req, res) => {
-  try {
-    await db.query(
-      'UPDATE aparelhos SET nome = ? WHERE id = ? AND cliente_id = ?',
-      [req.body.nome, req.params.id, req.user.id]
-    );
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
-
-app.put('/devices/:id/mpid', auth, async (req, res) => {
-  try {
-    await db.query('UPDATE aparelhos SET mp_user_id = ? WHERE id = ?',
-      [req.body.mp_user_id, req.params.id]);
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
-
-app.get('/payments', auth, async (req, res) => {
-  try {
-    const { from, to } = req.query;
-    const [rows] = await db.query(`
-      SELECT p.*, a.nome AS aparelho_nome
-      FROM pagamentos p
-      JOIN aparelhos a ON p.aparelho_id = a.id
-      WHERE a.cliente_id = ?
-        AND DATE(p.criado_em) BETWEEN ? AND ?
-      ORDER BY p.criado_em DESC
-    `, [req.user.id, from || '2000-01-01', to || '2099-12-31']);
-    res.json(rows);
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
-
-app.get('/master/clients', async (req, res) => {
-  try {
-    const [clientes] = await db.query(
-      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias, bloquear_vencer FROM clientes ORDER BY nome'
-    );
-    for (const c of clientes) {
-      const [aparelhos] = await db.query(
-        'SELECT id, nome, token, mp_user_id, online, noteiro_total FROM aparelhos WHERE cliente_id = ?',
-        [c.id]
-      );
-      c.aparelhos = aparelhos;
-    }
-    res.json(clientes);
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
-
-app.get('/master/client-token/:id', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      'SELECT id, nome, email, plano_expira FROM clientes WHERE id = ?',
-      [req.params.id]
-    );
-    if (!rows.length) return res.status(404).json({ erro: 'Cliente nao encontrado' });
-    const token = jwt.sign(
-      { id: rows[0].id, nome: rows[0].nome, email: rows[0].email },
-      process.env.JWT_SECRET, { expiresIn: '2h' }
-    );
-    res.json({ token, nome: rows[0].nome, plano_expira: rows[0].plano_expira });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
-
-app.post('/master/add-days', async (req, res) => {
-  try {
-    const { cliente_id, dias } = req.body;
-    await db.query(
-      'UPDATE clientes SET plano_expira = DATE_ADD(GREATEST(plano_expira, CURDATE()), INTERVAL ? DAY) WHERE id = ?',
-      [dias, cliente_id]
-    );
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
-
-app.post('/master/config-cliente', async (req, res) => {
-  try {
-    const { cliente_id, mensalidade_valor, mensalidade_dias, bloquear_vencer } = req.body;
-    console.log('config-cliente:', { cliente_id, mensalidade_valor, mensalidade_dias, bloquear_vencer });
-    await db.query(
-      'UPDATE clientes SET mensalidade_valor = ?, mensalidade_dias = ?, bloquear_vencer = ? WHERE id = ?',
-      [mensalidade_valor || 0, mensalidade_dias || 30, bloquear_vencer ? 1 : 0, cliente_id]
-    );
-    res.json({ ok: true });
-  } catch (e) {
-    console.error('config-cliente erro:', e.message);
-    res.status(500).json({ erro: e.message });
-  }
-});
-
-app.post('/webhook/esp32', async (req, res) => {
-  try {
-    const { token, tipo, valor } = req.body;
-    const [aparelhos] = await db.query('SELECT * FROM aparelhos WHERE token = ?', [token]);
-    if (!aparelhos.length) return res.status(404).json({ erro: 'Aparelho nao encontrado' });
-    await db.query(
-      'INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, ?, ?)',
-      [aparelhos[0].id, tipo || 'pix', valor]
-    );
-    if (tipo === 'noteiro') {
-      await db.query(
-        'UPDATE aparelhos SET noteiro_total = noteiro_total + ? WHERE id = ?',
-        [valor, aparelhos[0].id]
-      );
-    }
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
-});
-
-
-// ── FILA DE PULSOS ──────────────────────────────────
-const filaPulsos = {}; // { token: [{pulsos, id}] }
-
-// Painel envia pulso para aparelho
+// Enviar pulso do painel para o ESP
 app.post('/devices/:id/pulse', auth, async (req, res) => {
   try {
+    const { id } = req.params;
     const { pulsos } = req.body;
-    if (!pulsos || pulsos < 1) return res.status(400).json({ erro: 'Pulsos invalido' });
-    const [rows] = await db.query(
-      'SELECT * FROM aparelhos WHERE id = ? AND cliente_id = ?',
-      [req.params.id, req.user.id]
-    );
-    if (!rows.length) return res.status(404).json({ erro: 'Aparelho nao encontrado' });
+    const [rows] = await db.query('SELECT token FROM aparelhos WHERE id = ? AND cliente_id = ?', [id, req.user.id]);
+    
+    if (rows.length === 0) return res.status(404).json({ erro: 'Aparelho não encontrado' });
+    
     const token = rows[0].token;
     if (!filaPulsos[token]) filaPulsos[token] = [];
+    
     const cmdId = Date.now();
-    filaPulsos[token].push({ pulsos, id: cmdId });
-    console.log('Pulso enfileirado:', rows[0].nome, 'pulsos:', pulsos);
+    filaPulsos[token].push({ id: cmdId, pulsos: parseInt(pulsos) });
+
+    // Registra como pagamento do tipo 'painel'
     await db.query(
       'INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, ?, ?)',
-      [rows[0].id, 'pix', pulsos]
+      [id, 'pix', pulsos]
     );
+
     res.json({ ok: true, cmdId });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ESP consulta comando pendente (polling a cada 3s)
+// --- ROTAS DO ESP (POLLING) ---
+
 app.get('/esp/comando', async (req, res) => {
   try {
     const { token } = req.query;
     if (!token) return res.status(400).json({ erro: 'Token obrigatorio' });
-    await db.query('UPDATE aparelhos SET online = 1 WHERE token = ?', [token]);
+
+    // Atualiza o timestamp de atividade e marca online
+    await db.query('UPDATE aparelhos SET online = 1, updated_at = NOW() WHERE token = ?', [token]);
+
     const fila = filaPulsos[token];
     if (fila && fila.length > 0) {
       const cmd = fila.shift();
-      console.log('Comando enviado ao ESP, pulsos:', cmd.pulsos);
       return res.json({ tem_comando: true, pulsos: cmd.pulsos, id: cmd.id });
     }
     res.json({ tem_comando: false });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ESP confirma execução
 app.post('/esp/confirmar', async (req, res) => {
   try {
     const { token } = req.body;
-    await db.query('UPDATE aparelhos SET online = 1 WHERE token = ?', [token]);
+    await db.query('UPDATE aparelhos SET online = 1, updated_at = NOW() WHERE token = ?', [token]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// Marca offline aparelhos sem heartbeat há mais de 30s
-setInterval(async () => {
-  try {
-    await db.query("UPDATE aparelhos SET online = 0 WHERE updated_at < NOW() - INTERVAL 30 SECOND");
-  } catch(e) {}
-}, 15000);
+// Rota para o noteiro reportar nota
+app.post('/webhook/esp32', async (req, res) => {
+    try {
+      const { token, valor } = req.body;
+      const [rows] = await db.query('SELECT id FROM aparelhos WHERE token = ?', [token]);
+      if (rows.length === 0) return res.status(404).json({ erro: 'Aparelho invalido' });
+      
+      await db.query(
+        'INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, "noteiro", ?)',
+        [rows[0].id, valor]
+      );
+      res.json({ ok: true });
+    } catch (e) { res.status(500).json({ erro: e.message }); }
+});
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('DivertiPay rodando na porta ' + PORT));
+app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
