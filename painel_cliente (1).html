@@ -635,7 +635,7 @@ async function api(method, path, body = null) {
 
 let devices      = [];
 let allPayments  = [];
-let pulseCount   = 0;
+let pulseCount   = 1;
 let pulseTarget  = '';
 let openDropdown = null;
 let filteredPayments = [];
@@ -1313,12 +1313,14 @@ async function sendPulse() {
   const idx  = devices.findIndex(d => d.id === pulseTarget);
   const nome = idx >= 0 ? devices[idx].name : pulseTarget;
   const valorInput = parseFloat(document.getElementById('inp-valor-credito')?.value) || 0;
+  const qtdPulsos  = Math.max(1, Math.floor(pulseCount || 1)); // garante >= 1 e inteiro
 
   if (pulsoTipo === 'manual_normal') {
+    if (valorInput <= 0) { showToast('❌ Digite o valor em R$'); return; }
     // Envia comando real para o ESP via servidor
     showToast('⚡ Enviando crédito...');
     try {
-      const data = await api('POST', '/devices/' + pulseTarget + '/pulse', { pulsos: pulseCount, valor: valorInput });
+      const data = await api('POST', '/devices/' + pulseTarget + '/pulse', { pulsos: qtdPulsos, valor: valorInput });
       if (data.ok) {
         showToast('✅ Crédito enviado! O aparelho receberá em até 3s.');
         setTimeout(() => carregarDados(), 3500); // recarrega após ESP executar
@@ -1335,6 +1337,7 @@ async function sendPulse() {
     }
   } else {
     // Registro manual de dinheiro (sem pulso físico)
+    if (valorInput <= 0) { showToast('❌ Digite o valor em R$'); return; }
     showToast('💵 Dinheiro manual registrado!');
   }
 
