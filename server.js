@@ -232,20 +232,31 @@ app.post('/webhook/esp32', async (req, res) => {
 // ── START ──
 const PORT = process.env.PORT || 3000;
 
-async function iniciar() {
-  // Migrations primeiro, servidor só sobe depois
-  const migrations = [
-    `ALTER TABLE aparelhos ADD COLUMN mp_user_id VARCHAR(100) NULL`,
-    `ALTER TABLE clientes ADD COLUMN mensalidade_valor DECIMAL(10,2) NOT NULL DEFAULT 0`,
-    `ALTER TABLE clientes ADD COLUMN mensalidade_dias INT NOT NULL DEFAULT 30`,
-    `ALTER TABLE clientes ADD COLUMN bloquear_vencer TINYINT(1) NOT NULL DEFAULT 0`,
-  ];
-  for (const sql of migrations) {
-    try { await db.query(sql); console.log('Migration ok:', sql.substring(0,50)); }
-    catch (e) { if (e.code !== 'ER_DUP_FIELDNAME') console.error('Migration erro:', e.message); }
+async function garantirColuna(tabela, coluna, definicao) {
+  const [rows] = await db.query(
+    `SELECT COUNT(*) as existe FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+    [tabela, coluna]
+  );
+  if (rows[0].existe === 0) {
+    await db.query(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${definicao}`);
+    console.log(`✅ Coluna criada: ${tabela}.${coluna}`);
+  } else {
+    console.log(`ℹ️ Coluna já existe: ${tabela}.${coluna}`);
   }
-  console.log('Todas migrations concluídas.');
-  app.listen(PORT, () => console.log('DivertiPay rodando na porta', PORT));
+}
+
+async function iniciar() {
+  try {
+    await garantirColuna('aparelhos', 'mp_user_id',       'VARCHAR(100) NULL');
+    await garantirColuna('clientes',  'mensalidade_valor', 'DECIMAL(10,2) NOT NULL DEFAULT 0');
+    await garantirColuna('clientes',  'mensalidade_dias',  'INT NOT NULL DEFAULT 30');
+    await garantirColuna('clientes',  'bloquear_vencer',   'TINYINT(1) NOT NULL DEFAULT 0');
+    console.log('✅ Todas as colunas verificadas.');
+  } catch(e) {
+    console.error('❌ Erro nas migrations:', e.message);
+  }
+  app.listen(PORT, () => console.log(`🚀 DivertiPay rodando na porta ${PORT}`));
 }
 
 iniciar();
