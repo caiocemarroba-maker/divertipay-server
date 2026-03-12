@@ -143,7 +143,7 @@ app.get('/payments', auth, async (req, res) => {
 app.get('/master/clients', async (req, res) => {
   try {
     const [clientes] = await db.query(
-      'SELECT id, nome, email, plano_expira FROM clientes ORDER BY nome'
+      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias FROM clientes ORDER BY nome'
     );
     for (const c of clientes) {
       const [aparelhos] = await db.query(
@@ -186,6 +186,18 @@ app.post('/master/add-days', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// ── MASTER — configurar mensalidade do cliente ──
+app.post('/master/config-cliente', async (req, res) => {
+  try {
+    const { cliente_id, mensalidade_valor, mensalidade_dias } = req.body;
+    await db.query(
+      'UPDATE clientes SET mensalidade_valor = ?, mensalidade_dias = ? WHERE id = ?',
+      [mensalidade_valor || 0, mensalidade_dias || 30, cliente_id]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 // ── WEBHOOK ESP8266 ──
 app.post('/webhook/esp32', async (req, res) => {
   try {
@@ -206,14 +218,18 @@ app.post('/webhook/esp32', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── START + migration segura ──
+// ── START + migrations seguras ──
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
   console.log('DivertiPay rodando na porta', PORT);
-  try {
-    await db.query('ALTER TABLE aparelhos ADD COLUMN mp_user_id VARCHAR(100) NULL');
-    console.log('Coluna mp_user_id criada.');
-  } catch (e) {
-    console.log('mp_user_id já existe, ok.');
+  const migrations = [
+    `ALTER TABLE aparelhos ADD COLUMN mp_user_id VARCHAR(100) NULL`,
+    `ALTER TABLE clientes ADD COLUMN mensalidade_valor DECIMAL(10,2) DEFAULT 0`,
+    `ALTER TABLE clientes ADD COLUMN mensalidade_dias INT DEFAULT 30`,
+  ];
+  for (const sql of migrations) {
+    try { await db.query(sql); }
+    catch (e) { /* coluna já existe, ok */ }
   }
+  console.log('Migrations ok.');
 });
