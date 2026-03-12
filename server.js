@@ -285,7 +285,8 @@ app.post('/devices/:id/pulse', auth, async (req, res) => {
     if (!rows.length) return res.status(404).json({ erro: 'Aparelho nao encontrado' });
 
     const token = rows[0].token;
-    if (!filaPulsos[token]) filaPulsos[token] = [];
+    // Limpa fila anterior — evita acúmulo de comandos
+    filaPulsos[token] = [];
     const cmdId = Date.now();
     filaPulsos[token].push({ pulsos, id: cmdId });
     console.log('Pulso enfileirado:', rows[0].nome, 'pulsos:', pulsos, 'valor:', valor);
@@ -299,6 +300,16 @@ app.post('/devices/:id/pulse', auth, async (req, res) => {
 
     res.json({ ok: true, cmdId });
   } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// Limpa fila de um aparelho (emergência)
+app.delete('/devices/:id/fila', auth, async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT token FROM aparelhos WHERE id = ? AND cliente_id = ?', [req.params.id, req.user.id]);
+    if (!rows.length) return res.status(404).json({ erro: 'Aparelho nao encontrado' });
+    filaPulsos[rows[0].token] = [];
+    res.json({ ok: true, msg: 'Fila limpa' });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
 // ── ESP POLLING ───────────────────────────────────────────────
