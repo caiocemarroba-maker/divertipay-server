@@ -468,18 +468,18 @@
   </div>
 </div>
 
-<!-- MODAL NOVO APARELHO -->
-<div id="modal-novo-aparelho" class="modal-overlay" onclick="if(event.target===this)closeNovoAparelho()">
-  <div class="modal-box">
-    <div class="modal-title">➕ Novo Aparelho</div>
-    <div class="modal-sub">Digite o nome do local onde ficará o aparelho</div>
-    <div class="field" style="margin-top:16px">
-      <label>Nome do aparelho</label>
-      <input type="text" id="inp-novo-aparelho" placeholder="Ex: Bar do João, Sala 01...">
+<!-- MODAL NOVO APARELHO (só visível quando aberto) -->
+<div id="modal-novo-aparelho" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeNovoAparelho()">
+  <div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(0,0,0,0.15)">
+    <div style="font-family:'Inter',sans-serif;font-size:18px;font-weight:700;margin-bottom:6px">➕ Novo Aparelho</div>
+    <div style="font-size:13px;color:#8a94a6;margin-bottom:18px">Digite o nome do local onde ficará o aparelho</div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:11px;font-weight:600;color:#8a94a6;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px">Nome do aparelho</label>
+      <input type="text" id="inp-novo-aparelho" placeholder="Ex: Bar do João, Sala 01..." style="width:100%;padding:12px 14px;border:1.5px solid #e8ecf0;border-radius:12px;font-size:14px;font-family:'Inter',sans-serif;outline:none">
     </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeNovoAparelho()">Cancelar</button>
-      <button class="btn-primary" style="width:auto;padding:12px 24px" onclick="confirmarNovoAparelho()">Criar Aparelho</button>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button onclick="closeNovoAparelho()" style="flex:1;padding:12px;border:1.5px solid #e8ecf0;border-radius:12px;background:none;font-size:14px;font-weight:600;color:#8a94a6;cursor:pointer">Cancelar</button>
+      <button onclick="confirmarNovoAparelho()" style="flex:1;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Criar</button>
     </div>
   </div>
 </div>
@@ -722,10 +722,11 @@ async function carregarDados() {
 
 // ── NOVO APARELHO ──
 function openNovoAparelho() {
-  document.getElementById('modal-novo-aparelho').classList.add('open');
+  const m = document.getElementById('modal-novo-aparelho');
+  m.style.display = 'flex';
 }
 function closeNovoAparelho() {
-  document.getElementById('modal-novo-aparelho').classList.remove('open');
+  document.getElementById('modal-novo-aparelho').style.display = 'none';
   document.getElementById('inp-novo-aparelho').value = '';
 }
 async function confirmarNovoAparelho() {
