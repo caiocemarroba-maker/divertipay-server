@@ -42,15 +42,28 @@ app.get('/db-columns', async (req, res) => {
 
 
 // ── MIGRAÇÃO AUTOMÁTICA ─────────────────────────────────────
-async function migrarBanco() {
+async function adicionarColuna(tabela, coluna, definicao) {
   try {
-    await db.query("ALTER TABLE aparelhos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
-    console.log("[DB] updated_at OK");
-    await db.query("ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'confirmado'");
-    console.log("[DB] status OK");
-    await db.query("ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS recolhido TINYINT(1) DEFAULT 0");
-    console.log("[DB] recolhido OK");
-  } catch(e) { console.error("[DB] Migracao:", e.message); }
+    const [cols] = await db.query(
+      'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+      [tabela, coluna]
+    );
+    if (cols.length === 0) {
+      await db.query(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${definicao}`);
+      console.log(`[DB] Coluna ${tabela}.${coluna} criada`);
+    } else {
+      console.log(`[DB] ${tabela}.${coluna} ja existe`);
+    }
+  } catch(e) {
+    console.error(`[DB] Erro ao criar ${tabela}.${coluna}:`, e.message);
+  }
+}
+
+async function migrarBanco() {
+  await adicionarColuna('aparelhos',  'updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
+  await adicionarColuna('pagamentos', 'status',     "VARCHAR(20) DEFAULT 'confirmado'");
+  await adicionarColuna('pagamentos', 'recolhido',  'TINYINT(1) DEFAULT 0');
+  console.log('[DB] Migracao concluida');
 }
 migrarBanco();
 
