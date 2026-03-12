@@ -348,6 +348,12 @@
       <label>Senha</label>
       <input type="password" id="inp-pass" placeholder="••••••••">
     </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;cursor:pointer" onclick="toggleManter()">
+      <div id="manter-box" style="width:20px;height:20px;border-radius:6px;border:2px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s">
+        <span id="manter-check" style="display:none;color:#fff;font-size:13px;font-weight:700">✓</span>
+      </div>
+      <span style="font-size:13px;color:var(--muted)">Manter conectado</span>
+    </div>
     <button class="btn-primary" onclick="doLogin()">Entrar como Master</button>
     <div class="login-foot">
       DivertiPay © 2026 · Acesso Restrito<br>
@@ -595,14 +601,46 @@ function tick() {
 tick(); setInterval(tick, 10000);
 
 // ── LOGIN ──
+let manterConectado = false;
+
+function toggleManter() {
+  manterConectado = !manterConectado;
+  const box   = document.getElementById('manter-box');
+  const check = document.getElementById('manter-check');
+  box.style.background  = manterConectado ? 'var(--accent)' : '#fff';
+  box.style.borderColor = manterConectado ? 'var(--accent)' : 'var(--border)';
+  check.style.display   = manterConectado ? 'block' : 'none';
+}
+
 async function doLogin() {
   const u = document.getElementById('inp-user').value.trim();
   const p = document.getElementById('inp-pass').value.trim();
   if (!u || !p) { showToast('Preencha email e senha'); return; }
   if (u !== MASTER_EMAIL || p !== MASTER_SENHA) { showToast('Credenciais incorretas'); return; }
+  if (manterConectado) {
+    localStorage.setItem('dp_master_logged', '1');
+  } else {
+    sessionStorage.setItem('dp_master_logged', '1');
+    localStorage.removeItem('dp_master_logged');
+  }
   goTo('master');
   await carregarClientes();
 }
+
+function doLogout() {
+  localStorage.removeItem('dp_master_logged');
+  sessionStorage.removeItem('dp_master_logged');
+  goTo('login');
+}
+
+// Auto-login master
+window.addEventListener('DOMContentLoaded', async function() {
+  const logado = localStorage.getItem('dp_master_logged') || sessionStorage.getItem('dp_master_logged');
+  if (logado) {
+    goTo('master');
+    await carregarClientes();
+  }
+});
 
 async function carregarClientes() {
   showToast('Carregando...');
@@ -616,6 +654,7 @@ async function carregarClientes() {
     clients = data.map(c => {
       const expira = c.plano_expira ? new Date(c.plano_expira) : new Date();
       const dias   = Math.max(0, Math.ceil((expira - new Date()) / (1000*60*60*24)));
+      console.log(`Cliente ${c.nome}: bloquear_vencer=${c.bloquear_vencer} (tipo: ${typeof c.bloquear_vencer})`);
       return {
         id:                c.id,
         name:              c.nome,
@@ -644,8 +683,6 @@ async function carregarClientes() {
     clients = []; renderAll();
   }
 }
-
-function doLogout() { goTo('login'); }
 
 // ── ACESSAR PAINEL DO CLIENTE ──
 async function acessarPainel(clienteId, email) {
