@@ -197,12 +197,16 @@ app.post('/master/add-days', async (req, res) => {
 app.post('/master/config-cliente', async (req, res) => {
   try {
     const { cliente_id, mensalidade_valor, mensalidade_dias, bloquear_vencer } = req.body;
+    console.log('config-cliente:', { cliente_id, mensalidade_valor, mensalidade_dias, bloquear_vencer });
     await db.query(
       'UPDATE clientes SET mensalidade_valor = ?, mensalidade_dias = ?, bloquear_vencer = ? WHERE id = ?',
       [mensalidade_valor || 0, mensalidade_dias || 30, bloquear_vencer ? 1 : 0, cliente_id]
     );
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
+  } catch (e) {
+    console.error('config-cliente erro:', e.message);
+    res.status(500).json({ erro: e.message });
+  }
 });
 
 // ── WEBHOOK ESP8266 ──
@@ -225,19 +229,23 @@ app.post('/webhook/esp32', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── START + migrations seguras ──
+// ── START ──
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-  console.log('DivertiPay rodando na porta', PORT);
+
+async function iniciar() {
+  // Migrations primeiro, servidor só sobe depois
   const migrations = [
     `ALTER TABLE aparelhos ADD COLUMN mp_user_id VARCHAR(100) NULL`,
-    `ALTER TABLE clientes ADD COLUMN mensalidade_valor DECIMAL(10,2) DEFAULT 0`,
-    `ALTER TABLE clientes ADD COLUMN mensalidade_dias INT DEFAULT 30`,
-    `ALTER TABLE clientes ADD COLUMN bloquear_vencer TINYINT(1) DEFAULT 0`,
+    `ALTER TABLE clientes ADD COLUMN mensalidade_valor DECIMAL(10,2) NOT NULL DEFAULT 0`,
+    `ALTER TABLE clientes ADD COLUMN mensalidade_dias INT NOT NULL DEFAULT 30`,
+    `ALTER TABLE clientes ADD COLUMN bloquear_vencer TINYINT(1) NOT NULL DEFAULT 0`,
   ];
   for (const sql of migrations) {
-    try { await db.query(sql); }
-    catch (e) { /* coluna já existe, ok */ }
+    try { await db.query(sql); console.log('Migration ok:', sql.substring(0,50)); }
+    catch (e) { if (e.code !== 'ER_DUP_FIELDNAME') console.error('Migration erro:', e.message); }
   }
-  console.log('Migrations ok.');
-});
+  console.log('Todas migrations concluídas.');
+  app.listen(PORT, () => console.log('DivertiPay rodando na porta', PORT));
+}
+
+iniciar();
