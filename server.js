@@ -214,5 +214,64 @@ app.post('/webhook/esp32', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+
+// ── FILA DE PULSOS ──────────────────────────────────
+const filaPulsos = {}; // { token: [{pulsos, id}] }
+
+// Painel envia pulso para aparelho
+app.post('/devices/:id/pulse', auth, async (req, res) => {
+  try {
+    const { pulsos } = req.body;
+    if (!pulsos || pulsos < 1) return res.status(400).json({ erro: 'Pulsos invalido' });
+    const [rows] = await db.query(
+      'SELECT * FROM aparelhos WHERE id = ? AND cliente_id = ?',
+      [req.params.id, req.user.id]
+    );
+    if (!rows.length) return res.status(404).json({ erro: 'Aparelho nao encontrado' });
+    const token = rows[0].token;
+    if (!filaPulsos[token]) filaPulsos[token] = [];
+    const cmdId = Date.now();
+    filaPulsos[token].push({ pulsos, id: cmdId });
+    console.log('Pulso enfileirado:', rows[0].nome, 'pulsos:', pulsos);
+    await db.query(
+      'INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, ?, ?)',
+      [rows[0].id, 'manual', pulsos * 10]
+    );
+    res.json({ ok: true, cmdId });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ESP consulta comando pendente (polling a cada 3s)
+app.get('/esp/comando', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ erro: 'Token obrigatorio' });
+    await db.query('UPDATE aparelhos SET online = 1 WHERE token = ?', [token]);
+    const fila = filaPulsos[token];
+    if (fila && fila.length > 0) {
+      const cmd = fila.shift();
+      console.log('Comando enviado ao ESP, pulsos:', cmd.pulsos);
+      return res.json({ tem_comando: true, pulsos: cmd.pulsos, id: cmd.id });
+    }
+    res.json({ tem_comando: false });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ESP confirma execução
+app.post('/esp/confirmar', async (req, res) => {
+  try {
+    const { token } = req.body;
+    await db.query('UPDATE aparelhos SET online = 1 WHERE token = ?', [token]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// Marca offline aparelhos sem heartbeat há mais de 30s
+setInterval(async () => {
+  try {
+    await db.query("UPDATE aparelhos SET online = 0 WHERE updated_at < NOW() - INTERVAL 30 SECOND");
+  } catch(e) {}
+}, 15000);
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('DivertiPay rodando na porta ' + PORT));
