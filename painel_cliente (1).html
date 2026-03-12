@@ -1313,12 +1313,25 @@ async function carregarMensalidade() {
 }
 
 function openMensalidade() {
-  const days = parseInt(document.getElementById('days-num').textContent) || 0;
-  document.getElementById('m-days-left').textContent = days + ' dias';
+  const diasRestantes = parseInt(document.getElementById('days-num').textContent) || 0;
+
+  // Dias restantes
+  document.getElementById('m-days-left').textContent = diasRestantes + ' dias';
+
+  // Valor da mensalidade
   const valorFmt = mensalidadeConfig.valor > 0
     ? 'R$' + mensalidadeConfig.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})
     : 'A definir';
   document.getElementById('m-price').textContent = valorFmt;
+
+  // Dias que serão adicionados ao pagar
+  const diasAdd = mensalidadeConfig.dias || 30;
+  document.getElementById('m-dias-add').textContent = diasAdd + ' dias';
+
+  // Nome do plano dinâmico
+  document.getElementById('m-plan-name').textContent =
+    mensalidadeConfig.valor > 0 ? 'Plano Mensal · ' + diasAdd + ' dias' : 'Plano Mensal';
+
   drawQR();
   startPaymentCheck();
 }
@@ -1803,16 +1816,16 @@ function confirmRename() {
     </div>
 
     <!-- STATUS PLANO -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:12px;display:flex;align-items:center;gap:14px">
       <div style="width:48px;height:48px;border-radius:14px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">📋</div>
       <div style="flex:1">
         <div style="font-size:13px;color:var(--muted);margin-bottom:2px">Plano atual</div>
-        <div style="font-family:'Inter',sans-serif;font-size:16px;font-weight:800" id="m-plan-name">Plano Mensal</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px">Vence em <span id="m-days-left" style="font-weight:700;color:var(--accent)">21 dias</span></div>
+        <div style="font-size:16px;font-weight:800" id="m-plan-name">Plano Mensal</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Vence em <span id="m-days-left" style="font-weight:700;color:var(--accent)">—</span></div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-family:'Inter',sans-serif;font-size:24px;font-weight:800;color:var(--green)" id="m-price">R$120</div>
-        <div style="font-size:11px;color:var(--muted)">por 30 dias</div>
+        <div style="font-size:24px;font-weight:800;color:var(--green)" id="m-price">—</div>
+        <div style="font-size:11px;color:var(--muted)">por <span id="m-dias-add">30 dias</span></div>
       </div>
     </div>
 
