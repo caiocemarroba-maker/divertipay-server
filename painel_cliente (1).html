@@ -654,6 +654,7 @@ async function entrarPainel(data) {
   }
   goTo('devices');
   setDefaultDates();
+  await carregarMensalidade();
   await carregarDados();
 }
 
@@ -685,12 +686,12 @@ async function carregarDados() {
     token:  d.token || '',
     mpId:   d.mp_user_id || '—',
     status: d.online ? 'online' : 'offline',
-    today:  0, sales: 0,
+    today:  0, sales: 0, total: 0,
     cash:   parseFloat(d.noteiro_total) || 0
   }));
   const from = document.getElementById('f-start')?.value || '2000-01-01';
   const to   = document.getElementById('f-end')?.value   || '2099-12-31';
-  const payData = await api('GET', `/payments?from=${from}&to=${to}`);
+  const payData = await api('GET', `/payments?from=2000-01-01&to=2099-12-31`);
   allPayments = (payData || []).map(p => ({
     id:        p.id,
     device:    p.aparelho_nome,
@@ -701,6 +702,18 @@ async function carregarDados() {
     tipo:      'normal',
     recolhido: !!p.recolhido
   }));
+
+  // Calcular today, total e sales por aparelho
+  const hoje = new Date().toISOString().split('T')[0];
+  allPayments.forEach(p => {
+    if (!p.ok) return;
+    const dev = devices.find(d => d.name === p.device);
+    if (!dev) return;
+    dev.total += p.val;
+    dev.sales++;
+    if (p.date.startsWith(hoje)) dev.today += p.val;
+  });
+
   filteredPayments = [...allPayments];
   renderDevices();
   renderPayments(allPayments);
@@ -827,14 +840,20 @@ function renderDevices() {
             <span style="font-size:11px;color:var(--muted)">MP:</span>
             <span style="font-size:11px;font-weight:700;color:var(--text);letter-spacing:0.5px">${d.mpId || '—'}</span>
           </div>
-          <div onclick="openCashMenu(event,${i})"
-               class="cash-badge ${(d.cash||0) === 0 ? 'zero' : ''}">
-            💵 ${(d.cash||0) > 0 ? 'R$'+(d.cash).toLocaleString('pt-BR') : 'R$0'}
+          <div style="display:flex;gap:7px;align-items:center;margin-top:6px;flex-wrap:wrap">
+            <div onclick="openCashMenu(event,${i})"
+                 class="cash-badge ${(d.cash||0) === 0 ? 'zero' : ''}">
+              💵 ${(d.cash||0) > 0 ? 'R$'+(d.cash).toLocaleString('pt-BR') : 'R$0'}
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;padding:4px 9px;background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.18);border-radius:20px;cursor:default">
+              <span style="font-size:12px">💳</span>
+              <span style="font-size:12px;font-weight:700;color:var(--green)">${d.total > 0 ? 'R$'+d.total.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : 'R$0'}</span>
+            </div>
           </div>
         </div>
         <div class="dev-val">
           ${d.today > 0 ? 'R$'+d.today.toLocaleString('pt-BR') : '—'}
-          <small>${d.sales > 0 ? d.sales+' vendas' : 'hoje'}</small>
+          <small>${d.today > 0 ? 'hoje' : 'sem mov.'}</small>
         </div>
         <button class="dots-btn" onclick="toggleDropdown(event,${i},'${d.id}','${d.name}')">⋯</button>
         <div class="dropdown" id="dd-${i}" style="display:none">
@@ -1276,21 +1295,31 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── MENSALIDADE ──
+// Configuração de mensalidade — preenchida pelo servidor
 const mensalidadeConfig = {
-  valor: 120,       // definido pelo master
+  valor: 0,
+  dias: 30,
   chavePix: '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef1234567890520400005303986540512\n0.005802BR5915DivertiPay6009SAO PAULO62140510divertipay6304ABCD'
 };
 
+async function carregarMensalidade() {
+  try {
+    const data = await api('GET', '/auth/me');
+    if (data && data.mensalidade_valor !== undefined) {
+      mensalidadeConfig.valor = parseFloat(data.mensalidade_valor) || 0;
+      mensalidadeConfig.dias  = parseInt(data.mensalidade_dias)    || 30;
+    }
+  } catch(e) {}
+}
+
 function openMensalidade() {
-  // Atualiza info do plano
-  const days = parseInt(document.getElementById('days-num').textContent) || 21;
+  const days = parseInt(document.getElementById('days-num').textContent) || 0;
   document.getElementById('m-days-left').textContent = days + ' dias';
-  document.getElementById('m-price').textContent     = 'R$' + mensalidadeConfig.valor;
-
-  // Gera QR Code simples no canvas
+  const valorFmt = mensalidadeConfig.valor > 0
+    ? 'R$' + mensalidadeConfig.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})
+    : 'A definir';
+  document.getElementById('m-price').textContent = valorFmt;
   drawQR();
-
-  // Simula verificação de pagamento
   startPaymentCheck();
 }
 
