@@ -177,4 +177,13 @@ app.post('/webhook/esp32', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('DivertiPay rodando na porta', PORT));
+app.listen(PORT, async () => {
+  console.log('DivertiPay rodando na porta', PORT);
+  // Garante coluna mp_user_id (migration segura)
+  try {
+    await db.query(`ALTER TABLE aparelhos ADD COLUMN mp_user_id VARCHAR(100) NULL`);
+    console.log('Coluna mp_user_id adicionada.');
+  } catch(e) {
+    if (e.code !== 'ER_DUP_FIELDNAME') console.log('mp_user_id já existe, ok.');
+  }
+});
