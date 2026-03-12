@@ -18,15 +18,13 @@ const db = mysql.createPool({
   database: process.env.DB_NAME,
 });
 
-// ── Auth middleware ──
 function auth(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ erro: 'Sem token' });
   try { req.user = jwt.verify(token, process.env.JWT_SECRET); next(); }
-  catch { res.status(401).json({ erro: 'Token inválido' }); }
+  catch { res.status(401).json({ erro: 'Token invalido' }); }
 }
 
-// ── Status ──
 app.get('/', (req, res) => res.json({ status: 'ok', projeto: 'DivertiPay' }));
 
 app.get('/db-test', async (req, res) => {
@@ -34,7 +32,6 @@ app.get('/db-test', async (req, res) => {
   res.json({ tabelas: rows });
 });
 
-// ── LOGIN ──
 app.post('/auth/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
@@ -42,7 +39,6 @@ app.post('/auth/login', async (req, res) => {
     if (!rows.length) return res.status(401).json({ erro: 'Email ou senha incorretos' });
     const ok = await bcrypt.compare(senha, rows[0].senha_hash);
     if (!ok) return res.status(401).json({ erro: 'Email ou senha incorretos' });
-    // Verificar bloqueio por vencimento
     if (rows[0].bloquear_vencer) {
       const expira = new Date(rows[0].plano_expira);
       if (expira < new Date()) {
@@ -57,7 +53,6 @@ app.post('/auth/login', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── CADASTRO (master cria cliente) ──
 app.post('/auth/cadastro', async (req, res) => {
   try {
     const { nome, email, senha } = req.body;
@@ -71,24 +66,22 @@ app.post('/auth/cadastro', async (req, res) => {
     );
     res.json({ ok: true });
   } catch (e) {
-    if (e.code === 'ER_DUP_ENTRY') return res.status(400).json({ erro: 'Email já cadastrado' });
+    if (e.code === 'ER_DUP_ENTRY') return res.status(400).json({ erro: 'Email ja cadastrado' });
     res.status(500).json({ erro: e.message });
   }
 });
 
-// ── ME (dados do cliente logado) ──
 app.get('/auth/me', auth, async (req, res) => {
   try {
     const [rows] = await db.query(
       'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias, bloquear_vencer FROM clientes WHERE id = ?',
       [req.user.id]
     );
-    if (!rows.length) return res.status(404).json({ erro: 'Não encontrado' });
+    if (!rows.length) return res.status(404).json({ erro: 'Nao encontrado' });
     res.json(rows[0]);
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── APARELHOS ──
 app.get('/devices', auth, async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -102,7 +95,7 @@ app.get('/devices', auth, async (req, res) => {
 app.post('/devices', auth, async (req, res) => {
   try {
     const { nome, mp_user_id } = req.body;
-    if (!nome) return res.status(400).json({ erro: 'Nome obrigatório' });
+    if (!nome) return res.status(400).json({ erro: 'Nome obrigatorio' });
     const token = crypto.randomBytes(16).toString('hex');
     await db.query(
       'INSERT INTO aparelhos (cliente_id, nome, token, mp_user_id) VALUES (?, ?, ?, ?)',
@@ -130,7 +123,6 @@ app.put('/devices/:id/mpid', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── PAGAMENTOS ──
 app.get('/payments', auth, async (req, res) => {
   try {
     const { from, to } = req.query;
@@ -146,7 +138,6 @@ app.get('/payments', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── MASTER — listar clientes ──
 app.get('/master/clients', async (req, res) => {
   try {
     const [clientes] = await db.query(
@@ -163,14 +154,13 @@ app.get('/master/clients', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── MASTER — token temporário para acessar painel do cliente ──
 app.get('/master/client-token/:id', async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT id, nome, email, plano_expira, mensalidade_valor, mensalidade_dias, bloquear_vencer FROM clientes WHERE id = ?',
+      'SELECT id, nome, email, plano_expira FROM clientes WHERE id = ?',
       [req.params.id]
     );
-    if (!rows.length) return res.status(404).json({ erro: 'Cliente não encontrado' });
+    if (!rows.length) return res.status(404).json({ erro: 'Cliente nao encontrado' });
     const token = jwt.sign(
       { id: rows[0].id, nome: rows[0].nome, email: rows[0].email },
       process.env.JWT_SECRET, { expiresIn: '2h' }
@@ -179,21 +169,17 @@ app.get('/master/client-token/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── MASTER — adicionar dias ao plano ──
 app.post('/master/add-days', async (req, res) => {
   try {
     const { cliente_id, dias } = req.body;
     await db.query(
-      `UPDATE clientes
-       SET plano_expira = DATE_ADD(GREATEST(plano_expira, CURDATE()), INTERVAL ? DAY)
-       WHERE id = ?`,
+      'UPDATE clientes SET plano_expira = DATE_ADD(GREATEST(plano_expira, CURDATE()), INTERVAL ? DAY) WHERE id = ?',
       [dias, cliente_id]
     );
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── MASTER — configurar mensalidade do cliente ──
 app.post('/master/config-cliente', async (req, res) => {
   try {
     const { cliente_id, mensalidade_valor, mensalidade_dias, bloquear_vencer } = req.body;
@@ -209,12 +195,11 @@ app.post('/master/config-cliente', async (req, res) => {
   }
 });
 
-// ── WEBHOOK ESP8266 ──
 app.post('/webhook/esp32', async (req, res) => {
   try {
     const { token, tipo, valor } = req.body;
     const [aparelhos] = await db.query('SELECT * FROM aparelhos WHERE token = ?', [token]);
-    if (!aparelhos.length) return res.status(404).json({ erro: 'Aparelho não encontrado' });
+    if (!aparelhos.length) return res.status(404).json({ erro: 'Aparelho nao encontrado' });
     await db.query(
       'INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, ?, ?)',
       [aparelhos[0].id, tipo || 'pix', valor]
@@ -229,34 +214,5 @@ app.post('/webhook/esp32', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── START ──
 const PORT = process.env.PORT || 3000;
-
-async function garantirColuna(tabela, coluna, definicao) {
-  const [rows] = await db.query(
-    `SELECT COUNT(*) as existe FROM INFORMATION_SCHEMA.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
-    [tabela, coluna]
-  );
-  if (rows[0].existe === 0) {
-    await db.query(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${definicao}`);
-    console.log(`✅ Coluna criada: ${tabela}.${coluna}`);
-  } else {
-    console.log(`ℹ️ Coluna já existe: ${tabela}.${coluna}`);
-  }
-}
-
-async function iniciar() {
-  try {
-    await garantirColuna('aparelhos', 'mp_user_id',       'VARCHAR(100) NULL');
-    await garantirColuna('clientes',  'mensalidade_valor', 'DECIMAL(10,2) NOT NULL DEFAULT 0');
-    await garantirColuna('clientes',  'mensalidade_dias',  'INT NOT NULL DEFAULT 30');
-    await garantirColuna('clientes',  'bloquear_vencer',   'TINYINT(1) NOT NULL DEFAULT 0');
-    console.log('✅ Todas as colunas verificadas.');
-  } catch(e) {
-    console.error('❌ Erro nas migrations:', e.message);
-  }
-  app.listen(PORT, () => console.log(`🚀 DivertiPay rodando na porta ${PORT}`));
-}
-
-iniciar();
+app.listen(PORT, () => console.log('DivertiPay rodando na porta ' + PORT));
