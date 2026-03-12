@@ -746,15 +746,57 @@ function setToggle(val) {
 function openConfigCliente(ci) {
   configCliIdx = ci;
   const c = clients[ci];
-  document.getElementById('config-cli-nome-sub').textContent = c.name;
-  const valor = c.mensalidade_valor || 0;
-  const dias  = c.mensalidade_dias  || 30;
-  document.getElementById('inp-mensalidade-valor').value = valor > 0 ? valor : '';
-  document.getElementById('inp-mensalidade-dias').value  = dias;
-  document.getElementById('config-mensalidade-preview').textContent =
-    'R$' + (valor).toLocaleString('pt-BR', {minimumFractionDigits:2});
-  setToggle(c.bloquear_vencer);
-  document.getElementById('modal-config-cli').classList.add('open');
+  document.getElementById('config-cli-nome').textContent = c.name;
+  document.getElementById('inp2-mensalidade-valor').value = c.mensalidade_valor > 0 ? c.mensalidade_valor : '';
+  document.getElementById('inp2-mensalidade-dias').value  = c.mensalidade_dias || 30;
+  setToggle2(!!c.bloquear_vencer);
+  const m = document.getElementById('modal-config-cli2');
+  m.style.display = 'flex';
+}
+
+function closeConfigCli2() {
+  document.getElementById('modal-config-cli2').style.display = 'none';
+  configCliIdx = -1;
+}
+
+function setToggle2(ativo) {
+  const cb   = document.getElementById('inp2-bloquear-vencer');
+  const bg   = document.getElementById('toggle-bloquear2');
+  const knob = document.getElementById('toggle-knob2');
+  if (!cb) return;
+  cb.checked = ativo;
+  bg.style.background      = ativo ? 'var(--accent)' : '#e2e8f0';
+  knob.style.transform     = ativo ? 'translateX(20px)' : 'translateX(0)';
+}
+
+function toggleBloquear2() {
+  const cb = document.getElementById('inp2-bloquear-vencer');
+  setToggle2(!cb.checked);
+}
+
+async function salvarConfigCli2() {
+  if (configCliIdx < 0) return;
+  const valor     = parseFloat(document.getElementById('inp2-mensalidade-valor').value) || 0;
+  const dias      = parseInt(document.getElementById('inp2-mensalidade-dias').value)    || 30;
+  const bloquear  = document.getElementById('inp2-bloquear-vencer').checked ? 1 : 0;
+  const clienteId = clients[configCliIdx].id;
+  showToast('Salvando...');
+  try {
+    const data = await api('POST', '/master/config-cliente', {
+      cliente_id: clienteId, mensalidade_valor: valor, mensalidade_dias: dias, bloquear_vencer: bloquear
+    });
+    if (data.ok) {
+      clients[configCliIdx].mensalidade_valor = valor;
+      clients[configCliIdx].mensalidade_dias  = dias;
+      clients[configCliIdx].bloquear_vencer   = bloquear;
+      closeConfigCli2();
+      showToast('✅ Configuracoes salvas!');
+    } else {
+      showToast(data.erro || 'Erro ao salvar');
+    }
+  } catch(e) {
+    showToast('Erro de conexao');
+  }
 }
 
 function closeConfigCli() {
@@ -1063,62 +1105,65 @@ function showToast(msg) {
 }
 </script>
 <!-- ══ MODAL CONFIGURAÇÕES DO CLIENTE ══ -->
-<div id="modal-config-cli" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:9999;align-items:flex-end;justify-content:center;box-sizing:border-box" onclick="if(event.target===this)closeConfigCliente()">
+<div id="modal-config-cli2" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:9999;align-items:flex-end;justify-content:center;box-sizing:border-box" onclick="if(event.target===this)closeConfigCli2()">
   <div style="background:#fff;border-radius:24px 24px 0 0;padding:0;width:100%;max-width:480px;box-shadow:0 -8px 40px rgba(0,0,0,0.15);max-height:90vh;overflow-y:auto">
 
-    <!-- Handle -->
     <div style="display:flex;justify-content:center;padding:12px 0 0">
       <div style="width:36px;height:4px;border-radius:2px;background:#e0e4ea"></div>
     </div>
 
-    <!-- Header -->
     <div style="padding:16px 24px 0;display:flex;align-items:center;justify-content:space-between">
       <div>
         <div style="font-size:17px;font-weight:700">⚙️ Configurações</div>
         <div id="config-cli-nome" style="font-size:13px;color:var(--accent);font-weight:600;margin-top:2px">—</div>
       </div>
-      <button onclick="closeConfigCliente()" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+      <button onclick="closeConfigCli2()" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
     </div>
 
-    <!-- Seção: Mensalidade -->
+    <!-- Mensalidade -->
     <div style="margin:16px 24px 0">
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)">
         💳 Mensalidade
       </div>
-
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div>
-          <div style="font-size:14px;font-weight:600">Valor atual</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">Cobrado por 30 dias de plano</div>
-        </div>
-        <div id="config-cli-valor-atual" style="font-size:20px;font-weight:800;color:var(--green)">R$—</div>
-      </div>
-
       <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px">
-        <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">Novo valor (R$)</label>
-        <div style="display:flex;gap:10px;align-items:center">
-          <div style="position:relative;flex:1">
-            <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;font-weight:700;color:var(--muted)">R$</span>
-            <input type="number" id="inp-config-mensalidade" min="0" step="1" placeholder="120"
-              style="width:100%;padding:12px 14px 12px 36px;border:1.5px solid var(--border);border-radius:11px;font-size:16px;font-weight:700;font-family:'Inter',sans-serif;outline:none;box-sizing:border-box"
-              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-          </div>
-          <button onclick="salvarMensalidade()" style="padding:12px 20px;border:none;border-radius:11px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif">
-            Salvar
-          </button>
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">Valor (R$)</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="font-size:15px;font-weight:700;color:var(--muted)">R$</span>
+          <input type="number" id="inp2-mensalidade-valor" min="0" step="0.01" placeholder="120.00"
+            style="flex:1;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;outline:none"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:8px">
-          Este valor será exibido na tela de mensalidade do cliente como valor a pagar.
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px">Dias concedidos</label>
+        <input type="number" id="inp2-mensalidade-dias" min="1" max="365" value="30"
+          style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;outline:none"
+          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
+    </div>
+
+    <!-- Acesso -->
+    <div style="margin:16px 24px 0">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+        🔒 Acesso
+      </div>
+      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-size:13px;font-weight:700">Bloquear ao vencer</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Cliente perde acesso automaticamente ao expirar o plano</div>
+        </div>
+        <div style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;cursor:pointer" onclick="toggleBloquear2()">
+          <input type="checkbox" id="inp2-bloquear-vencer" style="opacity:0;width:0;height:0;position:absolute">
+          <span id="toggle-bloquear2" style="position:absolute;cursor:pointer;inset:0;background:#e2e8f0;border-radius:24px;transition:0.2s">
+            <span id="toggle-knob2" style="position:absolute;left:2px;top:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);transition:0.2s"></span>
+          </span>
         </div>
       </div>
     </div>
 
-    <!-- Espaço para futuras configurações -->
-    <div style="margin:16px 24px;padding:14px;background:rgba(249,115,22,0.04);border:1px dashed rgba(249,115,22,0.25);border-radius:12px;text-align:center">
-      <div style="font-size:12px;color:var(--muted)">Mais configurações em breve...</div>
+    <!-- Botões -->
+    <div style="display:flex;gap:10px;padding:20px 24px 32px">
+      <button onclick="closeConfigCli2()" style="flex:1;padding:14px;border:1.5px solid var(--border);border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">Cancelar</button>
+      <button onclick="salvarConfigCli2()" style="flex:2;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 4px 12px rgba(249,115,22,0.3)">✅ Salvar</button>
     </div>
-
-    <div style="height:24px"></div>
   </div>
 </div>
 
