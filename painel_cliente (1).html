@@ -1263,35 +1263,45 @@ function chg(v) {
   document.getElementById('p-num').textContent = pulseCount;
 }
 
-function sendPulse() {
-  const idx   = devices.findIndex(d => d.id === pulseTarget);
-  const nome  = idx >= 0 ? devices[idx].name : pulseTarget;
-  const valor = pulseCount * 10; // cada pulso = R$10 (exemplo)
-  const now   = new Date();
-  const pad   = v => String(v).padStart(2,'0');
-  const dateStr = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
+async function sendPulse() {
+  const idx  = devices.findIndex(d => d.id === pulseTarget);
+  const nome = idx >= 0 ? devices[idx].name : pulseTarget;
 
-  // Adiciona ao histórico
-  const newId = allPayments.length + 1;
+  if (pulsoTipo === 'manual_normal') {
+    // Envia comando real para o ESP via servidor
+    showToast('⚡ Enviando crédito...');
+    try {
+      const data = await api('POST', '/devices/' + pulseTarget + '/pulse', { pulsos: pulseCount });
+      if (data.ok) {
+        showToast('✅ Crédito enviado! O aparelho receberá em até 3s.');
+        if (idx >= 0) {
+          devices[idx].today = (devices[idx].today || 0) + (pulseCount * 10);
+          devices[idx].sales = (devices[idx].sales || 0) + 1;
+          renderDevices();
+        }
+      } else {
+        showToast('❌ Erro: ' + (data.erro || 'Falha ao enviar'));
+      }
+    } catch(e) {
+      showToast('❌ Erro de conexão');
+    }
+  } else {
+    // Registro manual de dinheiro (sem pulso físico)
+    showToast('💵 Dinheiro manual registrado!');
+  }
+
+  // Atualiza histórico local
+  const now = new Date();
+  const pad = v => String(v).padStart(2,'0');
+  const dateStr = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
   const entry = {
-    id: newId, device: nome, val: valor, method: 'Manual',
-    date: dateStr, ok: true, tipo: pulsoTipo, recolhido: false
+    id: allPayments.length + 1, device: nome, val: pulseCount * 10,
+    method: 'Manual', date: dateStr, ok: true, tipo: pulsoTipo, recolhido: false
   };
   allPayments.unshift(entry);
   filteredPayments.unshift(entry);
-
-  // Só soma ao total do dia se for manual_normal
-  if (idx >= 0 && pulsoTipo === 'manual_normal') {
-    devices[idx].today = (devices[idx].today || 0) + valor;
-    devices[idx].sales = (devices[idx].sales || 0) + 1;
-    renderDevices();
-  }
-
   renderPayments(filteredPayments);
   closeModal();
-
-  const label = pulsoTipo === 'manual_baixado' ? '💵 Dinheiro manual registrado!' : '⚡ Crédito enviado!';
-  showToast(label);
 }
 window.addEventListener('DOMContentLoaded', function() {
   var m = document.getElementById('modal');
