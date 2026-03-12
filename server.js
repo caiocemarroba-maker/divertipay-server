@@ -344,7 +344,7 @@ app.post('/esp/confirmar', async (req, res) => {
 // Marca offline aparelhos sem heartbeat ha mais de 30s
 setInterval(async () => {
   try {
-    await db.query("UPDATE aparelhos SET online = 0 WHERE updated_at < NOW() - INTERVAL 30 SECOND OR updated_at IS NULL");
+    await db.query("UPDATE aparelhos SET online = 0 WHERE updated_at < NOW() - INTERVAL 30 SECOND");
   } catch(e) {}
 }, 15000);
 
