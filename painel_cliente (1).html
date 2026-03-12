@@ -462,7 +462,7 @@
     </div>
       <div class="sec-head">
       <div class="sec-title">📡 Meus Aparelhos</div>
-      <button class="sec-btn" onclick="openNovoAparelho()">+ Novo</button>
+      <button class="sec-btn" id="btn-novo-aparelho" onclick="openNovoAparelho()" style="display:none">+ Novo Aparelho</button>
     </div>
     <div id="device-list"></div>
   </div>
@@ -634,6 +634,11 @@ function tick() {
 tick(); setInterval(tick, 10000);
 
 // ── LOGIN ──
+// Verifica se veio do master via URL (?master=1&token=xxx)
+const urlParams = new URLSearchParams(window.location.search);
+const isMaster  = urlParams.get('master') === '1';
+const masterToken = urlParams.get('token');
+
 async function doLogin() {
   const email = document.getElementById('inp-user').value.trim();
   const senha = document.getElementById('inp-pass').value.trim();
@@ -644,19 +649,48 @@ async function doLogin() {
     if (!data.token) { showToast(data.erro || 'Email ou senha incorretos'); return; }
     localStorage.setItem('dp_token', data.token);
     localStorage.setItem('dp_nome', data.nome);
-    const nomeFormatado = data.nome.split(' ')[0];
-    document.getElementById('user-name').textContent    = nomeFormatado;
-    document.getElementById('user-initial').textContent = nomeFormatado[0].toUpperCase();
-    const expira = new Date(data.plano_expira);
-    const dias   = Math.max(0, Math.ceil((expira - new Date()) / (1000*60*60*24)));
-    setDaysBadge(dias);
-    goTo('devices');
-    setDefaultDates();
-    await carregarDados();
+    await entrarPainel(data);
   } catch(e) {
     showToast('Erro de conexão');
   }
 }
+
+// Chamado tanto pelo login normal quanto pelo acesso do master
+async function entrarPainel(data) {
+  const nomeFormatado = data.nome.split(' ')[0];
+  document.getElementById('user-name').textContent    = nomeFormatado;
+  document.getElementById('user-initial').textContent = nomeFormatado[0].toUpperCase();
+  const expira = new Date(data.plano_expira);
+  const dias   = Math.max(0, Math.ceil((expira - new Date()) / (1000*60*60*24)));
+  setDaysBadge(dias);
+  // Se veio do master, mostrar botão de novo aparelho
+  if (isMaster || masterToken) {
+    const btn = document.getElementById('btn-novo-aparelho');
+    if (btn) btn.style.display = 'inline-flex';
+  }
+  goTo('devices');
+  setDefaultDates();
+  await carregarDados();
+}
+
+// Auto-login se veio do master com token
+window.addEventListener('DOMContentLoaded', async function() {
+  if (masterToken) {
+    localStorage.setItem('dp_token', masterToken);
+    try {
+      // Buscar dados do cliente com o token do master
+      const devData = await api('GET', '/devices');
+      if (!devData.erro) {
+        // Token válido — buscar nome do cliente
+        const meData = await api('GET', '/auth/me');
+        if (meData && meData.nome) {
+          await entrarPainel(meData);
+          return;
+        }
+      }
+    } catch(e) {}
+  }
+});
 
 async function carregarDados() {
   showToast('Carregando...');
