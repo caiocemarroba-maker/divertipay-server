@@ -32,6 +32,8 @@ app.get('/db-test', async (req, res) => {
   res.json({ tabelas: rows });
 });
 
+// ── AUTH ─────────────────────────────────────────────────────
+
 app.post('/auth/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
@@ -82,6 +84,8 @@ app.get('/auth/me', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// ── DEVICES ──────────────────────────────────────────────────
+
 app.get('/devices', auth, async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -123,6 +127,8 @@ app.put('/devices/:id/mpid', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// ── PAYMENTS ─────────────────────────────────────────────────
+
 app.get('/payments', auth, async (req, res) => {
   try {
     const { from, to } = req.query;
@@ -137,6 +143,8 @@ app.get('/payments', auth, async (req, res) => {
     res.json(rows);
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
+
+// ── MASTER ───────────────────────────────────────────────────
 
 app.get('/master/clients', async (req, res) => {
   try {
@@ -195,14 +203,18 @@ app.post('/master/config-cliente', async (req, res) => {
   }
 });
 
+// ── WEBHOOK NOTEIRO (ESP32) ───────────────────────────────────
+
 app.post('/webhook/esp32', async (req, res) => {
   try {
     const { token, tipo, valor } = req.body;
     const [aparelhos] = await db.query('SELECT * FROM aparelhos WHERE token = ?', [token]);
     if (!aparelhos.length) return res.status(404).json({ erro: 'Aparelho nao encontrado' });
+
+    // ✅ status = 'confirmado' para aparecer no painel
     await db.query(
-      'INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, ?, ?)',
-      [aparelhos[0].id, tipo || 'pix', valor]
+      'INSERT INTO pagamentos (aparelho_id, tipo, valor, status) VALUES (?, ?, ?, ?)',
+      [aparelhos[0].id, tipo || 'noteiro', valor, 'confirmado']
     );
     if (tipo === 'noteiro') {
       await db.query(
@@ -214,39 +226,44 @@ app.post('/webhook/esp32', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// ── FILA DE PULSOS ────────────────────────────────────────────
+const filaPulsos = {};
 
-// ── FILA DE PULSOS ──────────────────────────────────
-const filaPulsos = {}; // { token: [{pulsos, id}] }
-
-// Painel envia pulso para aparelho
 app.post('/devices/:id/pulse', auth, async (req, res) => {
   try {
-    const { pulsos } = req.body;
+    const { pulsos, valor_unitario } = req.body;
     if (!pulsos || pulsos < 1) return res.status(400).json({ erro: 'Pulsos invalido' });
+
     const [rows] = await db.query(
       'SELECT * FROM aparelhos WHERE id = ? AND cliente_id = ?',
       [req.params.id, req.user.id]
     );
     if (!rows.length) return res.status(404).json({ erro: 'Aparelho nao encontrado' });
+
     const token = rows[0].token;
     if (!filaPulsos[token]) filaPulsos[token] = [];
     const cmdId = Date.now();
     filaPulsos[token].push({ pulsos, id: cmdId });
     console.log('Pulso enfileirado:', rows[0].nome, 'pulsos:', pulsos);
+
+    // ✅ Usa valor_unitario enviado pelo painel, ou 1.00 como fallback
+    const valorTotal = (valor_unitario || 1.00) * pulsos;
     await db.query(
-      'INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, ?, ?)',
-      [rows[0].id, 'pix', pulsos]
+      'INSERT INTO pagamentos (aparelho_id, tipo, valor, status) VALUES (?, ?, ?, ?)',
+      [rows[0].id, 'pix', valorTotal, 'confirmado']
     );
+
     res.json({ ok: true, cmdId });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ESP consulta comando pendente (polling a cada 3s)
+// ── ESP POLLING ───────────────────────────────────────────────
+
 app.get('/esp/comando', async (req, res) => {
   try {
     const { token } = req.query;
     if (!token) return res.status(400).json({ erro: 'Token obrigatorio' });
-    // ✅ Atualiza online=1 E updated_at — necessário para o setInterval detectar offline
+    // ✅ Atualiza online=1 E updated_at para o setInterval detectar offline corretamente
     await db.query('UPDATE aparelhos SET online = 1, updated_at = NOW() WHERE token = ?', [token]);
     const fila = filaPulsos[token];
     if (fila && fila.length > 0) {
@@ -258,17 +275,16 @@ app.get('/esp/comando', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ESP confirma execução
 app.post('/esp/confirmar', async (req, res) => {
   try {
     const { token } = req.body;
-    // ✅ Atualiza updated_at também na confirmação
+    // ✅ Atualiza updated_at na confirmação também
     await db.query('UPDATE aparelhos SET online = 1, updated_at = NOW() WHERE token = ?', [token]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// Marca offline aparelhos sem heartbeat há mais de 30s
+// ✅ Marca offline aparelhos sem heartbeat há mais de 30s
 setInterval(async () => {
   try {
     await db.query("UPDATE aparelhos SET online = 0 WHERE updated_at < NOW() - INTERVAL 30 SECOND");
