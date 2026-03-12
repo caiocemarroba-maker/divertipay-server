@@ -25,6 +25,51 @@ function auth(req, res, next) {
   catch { res.status(401).json({ erro: 'Token invalido' }); }
 }
 
+// ── MIGRAÇÃO AUTOMÁTICA ──────────────────────────────────────
+async function adicionarColuna(tabela, coluna, definicao) {
+  try {
+    const [cols] = await db.query(
+      'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+      [tabela, coluna]
+    );
+    if (cols.length === 0) {
+      await db.query(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${definicao}`);
+      console.log(`[DB] Coluna ${tabela}.${coluna} criada`);
+    }
+  } catch(e) {
+    console.error(`[DB] Erro ao criar ${tabela}.${coluna}:`, e.message);
+  }
+}
+
+async function migrarBanco() {
+  await adicionarColuna('aparelhos', 'updated_at', 'TIMESTAMP NULL DEFAULT NULL');
+  await adicionarColuna('pagamentos', 'status',    "VARCHAR(20) DEFAULT 'confirmado'");
+  await adicionarColuna('pagamentos', 'recolhido', 'TINYINT(1) DEFAULT 0');
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS fila_pulsos (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        aparelho_id INT NOT NULL,
+        pulsos      INT NOT NULL DEFAULT 1,
+        criado_em   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_aparelho (aparelho_id)
+      )
+    `);
+    console.log('[DB] Tabela fila_pulsos OK');
+  } catch(e) {
+    console.error('[DB] Erro fila_pulsos:', e.message);
+  }
+  // Limpa fila antiga ao iniciar (evita pulsos de deploy anterior)
+  try {
+    await db.query('DELETE FROM fila_pulsos WHERE criado_em < NOW() - INTERVAL 5 MINUTE');
+    console.log('[DB] Fila antiga limpa no boot');
+  } catch(e) {}
+  console.log('[DB] Migracao concluida');
+}
+migrarBanco();
+
+// ── ROTAS BÁSICAS ────────────────────────────────────────────
+
 app.get('/', (req, res) => res.json({ status: 'ok', projeto: 'DivertiPay' }));
 
 app.get('/db-test', async (req, res) => {
@@ -39,33 +84,6 @@ app.get('/db-columns', async (req, res) => {
     res.json({ aparelhos: ap, pagamentos: pg });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
-
-
-// ── MIGRAÇÃO AUTOMÁTICA ─────────────────────────────────────
-async function adicionarColuna(tabela, coluna, definicao) {
-  try {
-    const [cols] = await db.query(
-      'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
-      [tabela, coluna]
-    );
-    if (cols.length === 0) {
-      await db.query(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${definicao}`);
-      console.log(`[DB] Coluna ${tabela}.${coluna} criada`);
-    } else {
-      console.log(`[DB] ${tabela}.${coluna} ja existe`);
-    }
-  } catch(e) {
-    console.error(`[DB] Erro ao criar ${tabela}.${coluna}:`, e.message);
-  }
-}
-
-async function migrarBanco() {
-  await adicionarColuna('aparelhos',  'updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
-  await adicionarColuna('pagamentos', 'status',     "VARCHAR(20) DEFAULT 'confirmado'");
-  await adicionarColuna('pagamentos', 'recolhido',  'TINYINT(1) DEFAULT 0');
-  console.log('[DB] Migracao concluida');
-}
-migrarBanco();
 
 // ── AUTH ─────────────────────────────────────────────────────
 
@@ -164,6 +182,7 @@ app.put('/devices/:id/mpid', auth, async (req, res) => {
 
 app.delete('/devices/:id', auth, async (req, res) => {
   try {
+    await db.query('DELETE FROM fila_pulsos WHERE aparelho_id = ?', [req.params.id]);
     await db.query('DELETE FROM pagamentos WHERE aparelho_id = ?', [req.params.id]);
     await db.query('DELETE FROM aparelhos WHERE id = ? AND cliente_id = ?', [req.params.id, req.user.id]);
     res.json({ ok: true });
@@ -187,7 +206,7 @@ app.get('/payments', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── MASTER ───────────────────────────────────────────────────
+// ── MASTER ────────────────────────────────────────────────────
 
 app.get('/master/clients', async (req, res) => {
   try {
@@ -234,17 +253,13 @@ app.post('/master/add-days', async (req, res) => {
 app.post('/master/config-cliente', async (req, res) => {
   try {
     const { cliente_id, mensalidade_valor, mensalidade_dias, bloquear_vencer } = req.body;
-    console.log('config-cliente recebido:', { cliente_id, mensalidade_valor, mensalidade_dias, bloquear_vencer });
     if (!cliente_id) return res.status(400).json({ erro: 'cliente_id obrigatorio' });
     await db.query(
       'UPDATE clientes SET mensalidade_valor = ?, mensalidade_dias = ?, bloquear_vencer = ? WHERE id = ?',
       [mensalidade_valor || 0, mensalidade_dias || 30, bloquear_vencer ? 1 : 0, cliente_id]
     );
     res.json({ ok: true });
-  } catch (e) {
-    console.error('config-cliente ERRO:', e.message);
-    res.status(500).json({ erro: e.message });
-  }
+  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
 // ── WEBHOOK NOTEIRO (ESP) ─────────────────────────────────────
@@ -254,8 +269,6 @@ app.post('/webhook/esp32', async (req, res) => {
     const { token, tipo, valor } = req.body;
     const [aparelhos] = await db.query('SELECT * FROM aparelhos WHERE token = ?', [token]);
     if (!aparelhos.length) return res.status(404).json({ erro: 'Aparelho nao encontrado' });
-
-    // FIX: status='confirmado' para aparecer corretamente no painel
     await db.query(
       'INSERT INTO pagamentos (aparelho_id, tipo, valor, status) VALUES (?, ?, ?, ?)',
       [aparelhos[0].id, tipo || 'noteiro', valor, 'confirmado']
@@ -270,13 +283,13 @@ app.post('/webhook/esp32', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── FILA DE PULSOS ────────────────────────────────────────────
-const filaPulsos = {};
+// ── FILA DE PULSOS (no banco — sobrevive a redeploy) ──────────
 
 app.post('/devices/:id/pulse', auth, async (req, res) => {
   try {
     const { pulsos, valor } = req.body;
-    if (!pulsos || pulsos < 1) return res.status(400).json({ erro: 'Pulsos invalido' });
+    const qtd = parseInt(pulsos) || 1;
+    if (qtd < 1 || qtd > 99) return res.status(400).json({ erro: 'Pulsos invalido (1-99)' });
 
     const [rows] = await db.query(
       'SELECT * FROM aparelhos WHERE id = ? AND cliente_id = ?',
@@ -284,30 +297,32 @@ app.post('/devices/:id/pulse', auth, async (req, res) => {
     );
     if (!rows.length) return res.status(404).json({ erro: 'Aparelho nao encontrado' });
 
-    const token = rows[0].token;
-    // Limpa fila anterior — evita acúmulo de comandos
-    filaPulsos[token] = [];
-    const cmdId = Date.now();
-    filaPulsos[token].push({ pulsos, id: cmdId });
-    console.log('Pulso enfileirado:', rows[0].nome, 'pulsos:', pulsos, 'valor:', valor);
+    // Limpa fila pendente antes de adicionar novo comando
+    await db.query('DELETE FROM fila_pulsos WHERE aparelho_id = ?', [rows[0].id]);
+    await db.query('INSERT INTO fila_pulsos (aparelho_id, pulsos) VALUES (?, ?)', [rows[0].id, qtd]);
 
-    // FIX: salva o valor em R$ real (enviado pelo painel), nao a qtd de pulsos
+    // Registra pagamento com valor real em R$
     const valorReal = parseFloat(valor) || 0;
-    await db.query(
-      'INSERT INTO pagamentos (aparelho_id, tipo, valor, status) VALUES (?, ?, ?, ?)',
-      [rows[0].id, 'pix', valorReal, 'confirmado']
-    );
+    if (valorReal > 0) {
+      await db.query(
+        'INSERT INTO pagamentos (aparelho_id, tipo, valor, status) VALUES (?, ?, ?, ?)',
+        [rows[0].id, 'pix', valorReal, 'confirmado']
+      );
+    }
 
-    res.json({ ok: true, cmdId });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
+    console.log(`[Pulse] ${rows[0].nome} → ${qtd} pulsos, R$${valorReal}`);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[Pulse ERRO]', e.message);
+    res.status(500).json({ erro: e.message });
+  }
 });
 
-// Limpa fila de um aparelho (emergência)
 app.delete('/devices/:id/fila', auth, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT token FROM aparelhos WHERE id = ? AND cliente_id = ?', [req.params.id, req.user.id]);
+    const [rows] = await db.query('SELECT id FROM aparelhos WHERE id = ? AND cliente_id = ?', [req.params.id, req.user.id]);
     if (!rows.length) return res.status(404).json({ erro: 'Aparelho nao encontrado' });
-    filaPulsos[rows[0].token] = [];
+    await db.query('DELETE FROM fila_pulsos WHERE aparelho_id = ?', [rows[0].id]);
     res.json({ ok: true, msg: 'Fila limpa' });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
@@ -318,14 +333,32 @@ app.get('/esp/comando', async (req, res) => {
   try {
     const { token } = req.query;
     if (!token) return res.status(400).json({ erro: 'Token obrigatorio' });
-    // FIX: atualiza updated_at para o setInterval detectar offline corretamente
-    await db.query('UPDATE aparelhos SET online = 1, updated_at = NOW() WHERE token = ?', [token]);
-    const fila = filaPulsos[token];
-    if (fila && fila.length > 0) {
-      const cmd = fila.shift();
-      console.log('Comando enviado ao ESP, pulsos:', cmd.pulsos);
+
+    // Atualiza heartbeat — marca online
+    const [upd] = await db.query(
+      'UPDATE aparelhos SET online = 1, updated_at = NOW() WHERE token = ?', [token]
+    );
+    if (upd.affectedRows === 0) {
+      return res.status(404).json({ erro: 'Token nao encontrado' });
+    }
+
+    // Busca aparelho e fila
+    const [aparelho] = await db.query('SELECT id, nome FROM aparelhos WHERE token = ?', [token]);
+    if (!aparelho.length) return res.json({ tem_comando: false });
+
+    const [fila] = await db.query(
+      'SELECT * FROM fila_pulsos WHERE aparelho_id = ? ORDER BY id ASC LIMIT 1',
+      [aparelho[0].id]
+    );
+
+    if (fila.length > 0) {
+      const cmd = fila[0];
+      // Remove da fila ANTES de responder — evita disparar duas vezes
+      await db.query('DELETE FROM fila_pulsos WHERE id = ?', [cmd.id]);
+      console.log(`[ESP] ${aparelho[0].nome} → ${cmd.pulsos} pulsos`);
       return res.json({ tem_comando: true, pulsos: cmd.pulsos, id: cmd.id });
     }
+
     res.json({ tem_comando: false });
   } catch (e) {
     console.error('[ESP/COMANDO ERRO]', e.message);
@@ -336,17 +369,27 @@ app.get('/esp/comando', async (req, res) => {
 app.post('/esp/confirmar', async (req, res) => {
   try {
     const { token } = req.body;
+    if (!token) return res.status(400).json({ erro: 'Token obrigatorio' });
     await db.query('UPDATE aparelhos SET online = 1, updated_at = NOW() WHERE token = ?', [token]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// Marca offline aparelhos sem heartbeat ha mais de 30s
+// Marca offline aparelhos sem heartbeat há mais de 35s
 setInterval(async () => {
   try {
-    await db.query("UPDATE aparelhos SET online = 0 WHERE updated_at < NOW() - INTERVAL 30 SECOND");
+    await db.query(
+      'UPDATE aparelhos SET online = 0 WHERE updated_at IS NOT NULL AND updated_at < NOW() - INTERVAL 35 SECOND'
+    );
   } catch(e) {}
 }, 15000);
+
+// Limpa fila com mais de 10 minutos (segurança)
+setInterval(async () => {
+  try {
+    await db.query('DELETE FROM fila_pulsos WHERE criado_em < NOW() - INTERVAL 10 MINUTE');
+  } catch(e) {}
+}, 60000);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('DivertiPay rodando na porta ' + PORT));
