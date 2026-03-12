@@ -694,14 +694,18 @@ async function salvarConfigCli() {
   const dias  = parseInt(document.getElementById('inp-mensalidade-dias').value)    || 30;
   const clienteId = clients[configCliIdx].id;
   showToast('Salvando...');
-  const data = await api('POST', '/master/config-cliente', { cliente_id: clienteId, mensalidade_valor: valor, mensalidade_dias: dias });
-  if (data.ok) {
-    clients[configCliIdx].mensalidade_valor = valor;
-    clients[configCliIdx].mensalidade_dias  = dias;
-    closeConfigCli();
-    showToast('✅ Configurações salvas!');
-  } else {
-    showToast(data.erro || 'Erro ao salvar');
+  try {
+    const data = await api('POST', '/master/config-cliente', { cliente_id: clienteId, mensalidade_valor: valor, mensalidade_dias: dias });
+    if (data.ok) {
+      clients[configCliIdx].mensalidade_valor = valor;
+      clients[configCliIdx].mensalidade_dias  = dias;
+      closeConfigCli();
+      showToast('✅ Configurações salvas!');
+    } else {
+      showToast(data.erro || 'Erro ao salvar');
+    }
+  } catch(e) {
+    showToast('Erro de conexão');
   }
 }
 
@@ -1039,42 +1043,6 @@ function showToast(msg) {
     <div style="height:24px"></div>
   </div>
 </div>
-
-<script>
-// ── CONFIGURAÇÕES DO CLIENTE ──
-let configCliIdx = -1;
-
-function openConfigCliente(ci) {
-  configCliIdx = ci;
-  const c = clients[ci];
-  document.getElementById('config-cli-nome').textContent = c.name + ' · ' + c.email;
-  const val = c.mensalidade || 120;
-  document.getElementById('config-cli-valor-atual').textContent = 'R$' + val;
-  document.getElementById('inp-config-mensalidade').value = val;
-  document.getElementById('modal-config-cli').style.display = 'flex';
-}
-
-function closeConfigCliente() {
-  document.getElementById('modal-config-cli').style.display = 'none';
-  configCliIdx = -1;
-}
-
-async function salvarMensalidade() {
-  if (configCliIdx < 0) return;
-  const val = parseFloat(document.getElementById('inp-config-mensalidade').value);
-  if (isNaN(val) || val < 0) { showToast('Digite um valor válido'); return; }
-  const clienteId = clients[configCliIdx].id;
-  showToast('Salvando...');
-  const data = await api('POST', '/master/config-cliente', { cliente_id: clienteId, mensalidade: val });
-  if (data.ok) {
-    clients[configCliIdx].mensalidade = val;
-    document.getElementById('config-cli-valor-atual').textContent = 'R$' + val;
-    showToast('✅ Mensalidade atualizada para R$' + val);
-  } else {
-    showToast(data.erro || 'Erro ao salvar');
-  }
-}
-</script>
 
 </body>
 </html>
