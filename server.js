@@ -32,6 +32,15 @@ app.get('/db-test', async (req, res) => {
   res.json({ tabelas: rows });
 });
 
+app.get('/db-columns', async (req, res) => {
+  try {
+    const [ap] = await db.query('SHOW COLUMNS FROM aparelhos');
+    const [pg] = await db.query('SHOW COLUMNS FROM pagamentos');
+    res.json({ aparelhos: ap, pagamentos: pg });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+
 // ── MIGRAÇÃO AUTOMÁTICA ─────────────────────────────────────
 async function migrarBanco() {
   try {
