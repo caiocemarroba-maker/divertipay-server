@@ -542,8 +542,23 @@
     </div>
 
     <!-- ESPAÇO PARA FUTURAS CONFIGURAÇÕES -->
-    <div style="margin-top:16px;padding:12px 14px;border:1.5px dashed var(--border);border-radius:12px;text-align:center;color:var(--muted);font-size:12px">
-      + Mais opções em breve
+    <div style="margin-top:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+        <span style="width:16px;height:2px;background:var(--accent);border-radius:2px;display:inline-block"></span>
+        🔒 Acesso
+      </div>
+      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-size:13px;font-weight:700">Bloquear ao vencer</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Cliente perde acesso automaticamente ao expirar o plano</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;cursor:pointer">
+          <input type="checkbox" id="inp-bloquear-vencer" style="opacity:0;width:0;height:0">
+          <span id="toggle-bloquear" onclick="toggleBloquear()" style="position:absolute;cursor:pointer;inset:0;background:#e2e8f0;border-radius:24px;transition:0.2s">
+            <span id="toggle-knob" style="position:absolute;left:2px;top:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);transition:0.2s"></span>
+          </span>
+        </label>
+      </div>
     </div>
 
     <div class="modal-btns" style="margin-top:16px">
@@ -607,6 +622,7 @@ async function carregarClientes() {
         daysLeft:          dias,
         mensalidade_valor: parseFloat(c.mensalidade_valor) || 0,
         mensalidade_dias:  parseInt(c.mensalidade_dias)    || 30,
+        bloquear_vencer:   !!c.bloquear_vencer,
         plat:              'MP',
         devices:           (c.aparelhos || []).map(d => ({
           id:     String(d.id),
@@ -670,6 +686,24 @@ async function confirmarNovoCli() {
 // ── CONFIGURAÇÕES DO CLIENTE ──
 let configCliIdx = -1;
 
+function toggleBloquear() {
+  const cb   = document.getElementById('inp-bloquear-vencer');
+  const bg   = document.getElementById('toggle-bloquear');
+  const knob = document.getElementById('toggle-knob');
+  cb.checked = !cb.checked;
+  bg.style.background = cb.checked ? 'var(--accent)' : '#e2e8f0';
+  knob.style.left     = cb.checked ? '22px' : '2px';
+}
+
+function setToggle(val) {
+  const cb   = document.getElementById('inp-bloquear-vencer');
+  const bg   = document.getElementById('toggle-bloquear');
+  const knob = document.getElementById('toggle-knob');
+  cb.checked          = !!val;
+  bg.style.background = val ? 'var(--accent)' : '#e2e8f0';
+  knob.style.left     = val ? '22px' : '2px';
+}
+
 function openConfigCliente(ci) {
   configCliIdx = ci;
   const c = clients[ci];
@@ -680,6 +714,7 @@ function openConfigCliente(ci) {
   document.getElementById('inp-mensalidade-dias').value  = dias;
   document.getElementById('config-mensalidade-preview').textContent =
     'R$' + (valor).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  setToggle(c.bloquear_vencer);
   document.getElementById('modal-config-cli').classList.add('open');
 }
 
@@ -690,15 +725,19 @@ function closeConfigCli() {
 
 async function salvarConfigCli() {
   if (configCliIdx < 0) return;
-  const valor = parseFloat(document.getElementById('inp-mensalidade-valor').value) || 0;
-  const dias  = parseInt(document.getElementById('inp-mensalidade-dias').value)    || 30;
-  const clienteId = clients[configCliIdx].id;
+  const valor          = parseFloat(document.getElementById('inp-mensalidade-valor').value) || 0;
+  const dias           = parseInt(document.getElementById('inp-mensalidade-dias').value)    || 30;
+  const bloquear       = document.getElementById('inp-bloquear-vencer').checked ? 1 : 0;
+  const clienteId      = clients[configCliIdx].id;
   showToast('Salvando...');
   try {
-    const data = await api('POST', '/master/config-cliente', { cliente_id: clienteId, mensalidade_valor: valor, mensalidade_dias: dias });
+    const data = await api('POST', '/master/config-cliente', {
+      cliente_id: clienteId, mensalidade_valor: valor, mensalidade_dias: dias, bloquear_vencer: bloquear
+    });
     if (data.ok) {
       clients[configCliIdx].mensalidade_valor = valor;
       clients[configCliIdx].mensalidade_dias  = dias;
+      clients[configCliIdx].bloquear_vencer   = bloquear;
       closeConfigCli();
       showToast('✅ Configurações salvas!');
     } else {
