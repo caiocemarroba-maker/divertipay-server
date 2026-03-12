@@ -316,7 +316,10 @@ app.get('/esp/comando', async (req, res) => {
       return res.json({ tem_comando: true, pulsos: cmd.pulsos, id: cmd.id });
     }
     res.json({ tem_comando: false });
-  } catch (e) { res.status(500).json({ erro: e.message }); }
+  } catch (e) {
+    console.error('[ESP/COMANDO ERRO]', e.message);
+    res.status(500).json({ erro: e.message });
+  }
 });
 
 app.post('/esp/confirmar', async (req, res) => {
@@ -330,7 +333,7 @@ app.post('/esp/confirmar', async (req, res) => {
 // Marca offline aparelhos sem heartbeat ha mais de 30s
 setInterval(async () => {
   try {
-    await db.query("UPDATE aparelhos SET online = 0 WHERE updated_at < NOW() - INTERVAL 30 SECOND");
+    await db.query("UPDATE aparelhos SET online = 0 WHERE updated_at < NOW() - INTERVAL 30 SECOND OR updated_at IS NULL");
   } catch(e) {}
 }, 15000);
 
