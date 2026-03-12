@@ -4,6 +4,7 @@ const cors = require('cors');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const app = express();
 
 app.use(cors());
@@ -17,59 +18,38 @@ const db = mysql.createPool({
   database: process.env.DB_NAME,
 });
 
-// ── Middleware de autenticação ──
 function auth(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ erro: 'Sem token' });
-  try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ erro: 'Token inválido' });
-  }
+  try { req.user = jwt.verify(token, process.env.JWT_SECRET); next(); }
+  catch { res.status(401).json({ erro: 'Token inválido' }); }
 }
 
-// ── Rota de teste ──
-app.get('/', (req, res) => {
-  res.json({ status: 'ok', projeto: 'DivertiPay' });
-});
+app.get('/', (req, res) => res.json({ status: 'ok', projeto: 'DivertiPay' }));
 
 app.get('/db-test', async (req, res) => {
   const [rows] = await db.query('SHOW TABLES');
   res.json({ tabelas: rows });
 });
 
-// ── LOGIN ──
 app.post('/auth/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
     const [rows] = await db.query('SELECT * FROM clientes WHERE email = ?', [email]);
     if (rows.length === 0) return res.status(401).json({ erro: 'Email ou senha incorretos' });
-    const cliente = rows[0];
-    const ok = await bcrypt.compare(senha, cliente.senha_hash);
+    const ok = await bcrypt.compare(senha, rows[0].senha_hash);
     if (!ok) return res.status(401).json({ erro: 'Email ou senha incorretos' });
-    const token = jwt.sign(
-      { id: cliente.id, nome: cliente.nome, email: cliente.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-    res.json({ token, nome: cliente.nome, plano_expira: cliente.plano_expira });
-  } catch (e) {
-    res.status(500).json({ erro: e.message });
-  }
+    const token = jwt.sign({ id: rows[0].id, nome: rows[0].nome, email: rows[0].email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, nome: rows[0].nome, plano_expira: rows[0].plano_expira });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── CADASTRO ──
 app.post('/auth/cadastro', async (req, res) => {
   try {
     const { nome, email, senha } = req.body;
     const hash = await bcrypt.hash(senha, 10);
-    const expira = new Date();
-    expira.setDate(expira.getDate() + 30);
-    await db.query(
-      'INSERT INTO clientes (nome, email, senha_hash, plano_expira) VALUES (?, ?, ?, ?)',
-      [nome, email, hash, expira]
-    );
+    const expira = new Date(); expira.setDate(expira.getDate() + 30);
+    await db.query('INSERT INTO clientes (nome, email, senha_hash, plano_expira) VALUES (?, ?, ?, ?)', [nome, email, hash, expira]);
     res.json({ ok: true, mensagem: 'Cliente criado com 30 dias de plano!' });
   } catch (e) {
     if (e.code === 'ER_DUP_ENTRY') return res.status(400).json({ erro: 'Email já cadastrado' });
@@ -77,82 +57,72 @@ app.post('/auth/cadastro', async (req, res) => {
   }
 });
 
-// ── APARELHOS ──
 app.get('/devices', auth, async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM aparelhos WHERE cliente_id = ?', [req.user.id]);
     res.json(rows);
-  } catch (e) {
-    res.status(500).json({ erro: e.message });
-  }
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+app.post('/devices', auth, async (req, res) => {
+  try {
+    const { nome } = req.body;
+    if (!nome) return res.status(400).json({ erro: 'Nome obrigatório' });
+    const token = crypto.randomBytes(16).toString('hex');
+    await db.query('INSERT INTO aparelhos (cliente_id, nome, token) VALUES (?, ?, ?)', [req.user.id, nome, token]);
+    res.json({ ok: true, token, mensagem: 'Aparelho criado! Guarde o token para o firmware.' });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
 app.put('/devices/:id/name', auth, async (req, res) => {
   try {
-    await db.query('UPDATE aparelhos SET nome = ? WHERE id = ? AND cliente_id = ?',
-      [req.body.nome, req.params.id, req.user.id]);
+    await db.query('UPDATE aparelhos SET nome = ? WHERE id = ? AND cliente_id = ?', [req.body.nome, req.params.id, req.user.id]);
     res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ erro: e.message });
-  }
+  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── PAGAMENTOS ──
 app.get('/payments', auth, async (req, res) => {
   try {
     const { from, to } = req.query;
     const [rows] = await db.query(`
-      SELECT p.*, a.nome as aparelho_nome
-      FROM pagamentos p
+      SELECT p.*, a.nome as aparelho_nome FROM pagamentos p
       JOIN aparelhos a ON p.aparelho_id = a.id
-      WHERE a.cliente_id = ?
-      AND DATE(p.criado_em) BETWEEN ? AND ?
+      WHERE a.cliente_id = ? AND DATE(p.criado_em) BETWEEN ? AND ?
       ORDER BY p.criado_em DESC
     `, [req.user.id, from || '2000-01-01', to || '2099-12-31']);
     res.json(rows);
-  } catch (e) {
-    res.status(500).json({ erro: e.message });
-  }
+  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── MASTER — lista todos os clientes com aparelhos ──
 app.get('/master/clients', async (req, res) => {
   try {
     const [clientes] = await db.query('SELECT * FROM clientes ORDER BY nome');
     for (const c of clientes) {
-      const [aparelhos] = await db.query(
-        'SELECT * FROM aparelhos WHERE cliente_id = ?', [c.id]
-      );
+      const [aparelhos] = await db.query('SELECT * FROM aparelhos WHERE cliente_id = ?', [c.id]);
       c.aparelhos = aparelhos;
     }
     res.json(clientes);
-  } catch (e) {
-    res.status(500).json({ erro: e.message });
-  }
+  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── WEBHOOK ESP8266 ──
+app.post('/master/add-days', async (req, res) => {
+  try {
+    const { cliente_id, dias } = req.body;
+    await db.query(`UPDATE clientes SET plano_expira = DATE_ADD(GREATEST(plano_expira, CURDATE()), INTERVAL ? DAY) WHERE id = ?`, [dias, cliente_id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 app.post('/webhook/esp32', async (req, res) => {
   try {
     const { token, tipo, valor } = req.body;
     const [aparelhos] = await db.query('SELECT * FROM aparelhos WHERE token = ?', [token]);
     if (aparelhos.length === 0) return res.status(404).json({ erro: 'Aparelho não encontrado' });
-    const aparelho = aparelhos[0];
-    await db.query(
-      'INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, ?, ?)',
-      [aparelho.id, tipo, valor]
-    );
-    if (tipo === 'noteiro') {
-      await db.query('UPDATE aparelhos SET noteiro_total = noteiro_total + ? WHERE id = ?',
-        [valor, aparelho.id]);
-    }
+    await db.query('INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, ?, ?)', [aparelhos[0].id, tipo || 'pix', valor]);
+    if (tipo === 'noteiro') await db.query('UPDATE aparelhos SET noteiro_total = noteiro_total + ? WHERE id = ?', [valor, aparelhos[0].id]);
     res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ erro: e.message });
-  }
+  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log('DivertiPay rodando na porta', PORT);
-});
+app.listen(PORT, () => console.log('DivertiPay rodando na porta', PORT));
