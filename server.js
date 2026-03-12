@@ -29,7 +29,7 @@ function auth(req, res, next) {
   }
 }
 
-// ── Rotas públicas ──
+// ── Rota de teste ──
 app.get('/', (req, res) => {
   res.json({ status: 'ok', projeto: 'DivertiPay' });
 });
@@ -59,7 +59,7 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
-// ── CADASTRO (usado pelo master para criar clientes) ──
+// ── CADASTRO ──
 app.post('/auth/cadastro', async (req, res) => {
   try {
     const { nome, email, senha } = req.body;
@@ -79,28 +79,56 @@ app.post('/auth/cadastro', async (req, res) => {
 
 // ── APARELHOS ──
 app.get('/devices', auth, async (req, res) => {
-  const [rows] = await db.query('SELECT * FROM aparelhos WHERE cliente_id = ?', [req.user.id]);
-  res.json(rows);
+  try {
+    const [rows] = await db.query('SELECT * FROM aparelhos WHERE cliente_id = ?', [req.user.id]);
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ erro: e.message });
+  }
 });
 
 app.put('/devices/:id/name', auth, async (req, res) => {
-  await db.query('UPDATE aparelhos SET nome = ? WHERE id = ? AND cliente_id = ?',
-    [req.body.nome, req.params.id, req.user.id]);
-  res.json({ ok: true });
+  try {
+    await db.query('UPDATE aparelhos SET nome = ? WHERE id = ? AND cliente_id = ?',
+      [req.body.nome, req.params.id, req.user.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ erro: e.message });
+  }
 });
 
 // ── PAGAMENTOS ──
 app.get('/payments', auth, async (req, res) => {
-  const { from, to } = req.query;
-  const [rows] = await db.query(`
-    SELECT p.*, a.nome as aparelho_nome
-    FROM pagamentos p
-    JOIN aparelhos a ON p.aparelho_id = a.id
-    WHERE a.cliente_id = ?
-    AND DATE(p.criado_em) BETWEEN ? AND ?
-    ORDER BY p.criado_em DESC
-  `, [req.user.id, from || '2000-01-01', to || '2099-12-31']);
-  res.json(rows);
+  try {
+    const { from, to } = req.query;
+    const [rows] = await db.query(`
+      SELECT p.*, a.nome as aparelho_nome
+      FROM pagamentos p
+      JOIN aparelhos a ON p.aparelho_id = a.id
+      WHERE a.cliente_id = ?
+      AND DATE(p.criado_em) BETWEEN ? AND ?
+      ORDER BY p.criado_em DESC
+    `, [req.user.id, from || '2000-01-01', to || '2099-12-31']);
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ erro: e.message });
+  }
+});
+
+// ── MASTER — lista todos os clientes com aparelhos ──
+app.get('/master/clients', async (req, res) => {
+  try {
+    const [clientes] = await db.query('SELECT * FROM clientes ORDER BY nome');
+    for (const c of clientes) {
+      const [aparelhos] = await db.query(
+        'SELECT * FROM aparelhos WHERE cliente_id = ?', [c.id]
+      );
+      c.aparelhos = aparelhos;
+    }
+    res.json(clientes);
+  } catch (e) {
+    res.status(500).json({ erro: e.message });
+  }
 });
 
 // ── WEBHOOK ESP8266 ──
@@ -126,20 +154,5 @@ app.post('/webhook/esp32', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  // ── ROTA MASTER — lista todos os clientes com aparelhos ──
-app.get('/master/clients', async (req, res) => {
-  try {
-    const [clientes] = await db.query('SELECT * FROM clientes ORDER BY nome');
-    for (const c of clientes) {
-      const [aparelhos] = await db.query(
-        'SELECT * FROM aparelhos WHERE cliente_id = ?', [c.id]
-      );
-      c.aparelhos = aparelhos;
-    }
-    res.json(clientes);
-  } catch (e) {
-    res.status(500).json({ erro: e.message });
-  }
-});
   console.log('DivertiPay rodando na porta', PORT);
 });
