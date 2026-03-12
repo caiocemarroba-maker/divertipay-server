@@ -26,17 +26,17 @@ function auth(req, res, next) {
 }
 
 app.get('/', (req, res) => res.json({ status: 'ok', projeto: 'DivertiPay' }));
-
 app.get('/db-test', async (req, res) => {
   const [rows] = await db.query('SHOW TABLES');
   res.json({ tabelas: rows });
 });
 
+// ── AUTH ──
 app.post('/auth/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
     const [rows] = await db.query('SELECT * FROM clientes WHERE email = ?', [email]);
-    if (rows.length === 0) return res.status(401).json({ erro: 'Email ou senha incorretos' });
+    if (!rows.length) return res.status(401).json({ erro: 'Email ou senha incorretos' });
     const ok = await bcrypt.compare(senha, rows[0].senha_hash);
     if (!ok) return res.status(401).json({ erro: 'Email ou senha incorretos' });
     const token = jwt.sign({ id: rows[0].id, nome: rows[0].nome, email: rows[0].email }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -57,6 +57,16 @@ app.post('/auth/cadastro', async (req, res) => {
   }
 });
 
+// Retorna dados do usuário logado (usado pelo painel cliente quando acessado via master)
+app.get('/auth/me', auth, async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT id, nome, email, plano_expira FROM clientes WHERE id = ?', [req.user.id]);
+    if (!rows.length) return res.status(404).json({ erro: 'Não encontrado' });
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── APARELHOS ──
 app.get('/devices', auth, async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM aparelhos WHERE cliente_id = ?', [req.user.id]);
@@ -70,7 +80,7 @@ app.post('/devices', auth, async (req, res) => {
     if (!nome) return res.status(400).json({ erro: 'Nome obrigatório' });
     const token = crypto.randomBytes(16).toString('hex');
     await db.query('INSERT INTO aparelhos (cliente_id, nome, token) VALUES (?, ?, ?)', [req.user.id, nome, token]);
-    res.json({ ok: true, token, mensagem: 'Aparelho criado! Guarde o token para o firmware.' });
+    res.json({ ok: true, token, mensagem: 'Aparelho criado!' });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
@@ -81,6 +91,7 @@ app.put('/devices/:id/name', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// ── PAGAMENTOS ──
 app.get('/payments', auth, async (req, res) => {
   try {
     const { from, to } = req.query;
@@ -94,6 +105,7 @@ app.get('/payments', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// ── MASTER ──
 app.get('/master/clients', async (req, res) => {
   try {
     const [clientes] = await db.query('SELECT * FROM clientes ORDER BY nome');
@@ -105,6 +117,16 @@ app.get('/master/clients', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// Gera token JWT de um cliente para o master acessar o painel dele
+app.get('/master/client-token/:id', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM clientes WHERE id = ?', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ erro: 'Cliente não encontrado' });
+    const token = jwt.sign({ id: rows[0].id, nome: rows[0].nome, email: rows[0].email }, process.env.JWT_SECRET, { expiresIn: '2h' });
+    res.json({ token, nome: rows[0].nome, plano_expira: rows[0].plano_expira });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 app.post('/master/add-days', async (req, res) => {
   try {
     const { cliente_id, dias } = req.body;
@@ -113,11 +135,12 @@ app.post('/master/add-days', async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// ── WEBHOOK ESP8266 ──
 app.post('/webhook/esp32', async (req, res) => {
   try {
     const { token, tipo, valor } = req.body;
     const [aparelhos] = await db.query('SELECT * FROM aparelhos WHERE token = ?', [token]);
-    if (aparelhos.length === 0) return res.status(404).json({ erro: 'Aparelho não encontrado' });
+    if (!aparelhos.length) return res.status(404).json({ erro: 'Aparelho não encontrado' });
     await db.query('INSERT INTO pagamentos (aparelho_id, tipo, valor) VALUES (?, ?, ?)', [aparelhos[0].id, tipo || 'pix', valor]);
     if (tipo === 'noteiro') await db.query('UPDATE aparelhos SET noteiro_total = noteiro_total + ? WHERE id = ?', [valor, aparelhos[0].id]);
     res.json({ ok: true });
