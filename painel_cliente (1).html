@@ -582,6 +582,12 @@
       <button class="pctl" onclick="chg(+1)">+1</button>
       <button class="pctl" onclick="chg(+5)">+5</button>
     </div>
+    <div style="display:flex;align-items:center;gap:8px;margin:0 0 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px">
+      <span style="font-size:13px;color:var(--muted);font-weight:600">Valor R$</span>
+      <input type="number" id="inp-valor-credito" min="0" step="0.01" placeholder="0.00" value=""
+        style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-weight:700;font-family:'Inter',sans-serif;outline:none;text-align:right"
+        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+    </div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
       <button class="btn-send" id="btn-send-pulse" onclick="sendPulse()">⚡ Enviar Crédito</button>
@@ -1277,16 +1283,17 @@ function chg(v) {
 async function sendPulse() {
   const idx  = devices.findIndex(d => d.id === pulseTarget);
   const nome = idx >= 0 ? devices[idx].name : pulseTarget;
+  const valorInput = parseFloat(document.getElementById('inp-valor-credito')?.value) || 0;
 
   if (pulsoTipo === 'manual_normal') {
     // Envia comando real para o ESP via servidor
     showToast('⚡ Enviando crédito...');
     try {
-      const data = await api('POST', '/devices/' + pulseTarget + '/pulse', { pulsos: pulseCount });
+      const data = await api('POST', '/devices/' + pulseTarget + '/pulse', { pulsos: pulseCount, valor: valorInput });
       if (data.ok) {
         showToast('✅ Crédito enviado! O aparelho receberá em até 3s.');
         if (idx >= 0) {
-          devices[idx].today = (devices[idx].today || 0) + (pulseCount * 10);
+          devices[idx].today = (devices[idx].today || 0) + valorInput;
           devices[idx].sales = (devices[idx].sales || 0) + 1;
           renderDevices();
         }
@@ -1306,7 +1313,7 @@ async function sendPulse() {
   const pad = v => String(v).padStart(2,'0');
   const dateStr = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
   const entry = {
-    id: allPayments.length + 1, device: nome, val: pulseCount * 10,
+    id: allPayments.length + 1, device: nome, val: valorInput,
     method: 'Manual', date: dateStr, ok: true, tipo: pulsoTipo, recolhido: false
   };
   allPayments.unshift(entry);
