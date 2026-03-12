@@ -937,6 +937,9 @@ function renderDevices() {
             <span class="dd-icon">✏️</span> Renomear Ponto
           </div>
           ${configBtn}
+          <div class="dd-item danger" onclick="limparFila('${d.id}','${d.name}');closeAllDropdowns()">
+            <span class="dd-icon">🧹</span> Limpar Fila de Pulsos
+          </div>
           <div class="dd-item danger" onclick="confirmarApagar(${i},'${d.name}');closeAllDropdowns()">
             <span class="dd-icon">🗑️</span> Apagar Tudo
           </div>
@@ -1826,6 +1829,14 @@ function showToast(msg) {
 }
 
 // ── COPIAR TOKEN ──
+async function limparFila(id, nome) {
+  if (!confirm('Limpar fila de pulsos de ' + nome + '?\nIsso cancela comandos pendentes.')) return;
+  try {
+    const data = await api('DELETE', '/devices/' + id + '/fila');
+    showToast(data.ok ? '🧹 Fila limpa!' : '❌ ' + (data.erro || 'Erro'));
+  } catch(e) { showToast('❌ Erro de conexão'); }
+}
+
 function copiarToken(token, nome) {
   if (!token || token === 'undefined' || token.length < 10) {
     showToast('Token não disponível para ' + nome);
