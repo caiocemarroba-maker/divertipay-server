@@ -592,17 +592,23 @@ async function carregarClientes() {
   showToast('Carregando...');
   try {
     const data = await api('GET', '/master/clients');
-    clients = (Array.isArray(data) ? data : []).map(c => {
+    console.log('master/clients resposta:', data);
+    if (!Array.isArray(data)) {
+      showToast('Erro: ' + (data.erro || JSON.stringify(data)));
+      clients = []; renderAll(); return;
+    }
+    clients = data.map(c => {
       const expira = c.plano_expira ? new Date(c.plano_expira) : new Date();
       const dias   = Math.max(0, Math.ceil((expira - new Date()) / (1000*60*60*24)));
       return {
-        id:          c.id,
-        name:        c.nome,
-        email:       c.email,
-        daysLeft:    dias,
-        mensalidade: parseFloat(c.mensalidade) || 120,
-        plat:        'MP',
-        devices:     (c.aparelhos || []).map(d => ({
+        id:                c.id,
+        name:              c.nome,
+        email:             c.email,
+        daysLeft:          dias,
+        mensalidade_valor: parseFloat(c.mensalidade_valor) || 0,
+        mensalidade_dias:  parseInt(c.mensalidade_dias)    || 30,
+        plat:              'MP',
+        devices:           (c.aparelhos || []).map(d => ({
           id:     String(d.id),
           name:   d.nome,
           mpId:   d.mp_user_id || '—',
@@ -613,8 +619,12 @@ async function carregarClientes() {
       };
     });
     renderAll();
+    if (clients.length === 0) showToast('Nenhum cliente cadastrado ainda');
+    else showToast('✅ ' + clients.length + ' cliente(s) carregado(s)');
   } catch(e) {
-    showToast('Erro ao carregar'); clients = []; renderAll();
+    console.error('Erro carregarClientes:', e);
+    showToast('Erro de conexão com servidor');
+    clients = []; renderAll();
   }
 }
 
@@ -717,6 +727,15 @@ function renderAll() {
 }
 
 function renderClients() {
+  if (clients.length === 0) {
+    document.getElementById('clients-list').innerHTML = `
+      <div style="text-align:center;padding:48px 20px;color:var(--muted)">
+        <div style="font-size:40px;margin-bottom:12px">👤</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">Nenhum cliente cadastrado</div>
+        <div style="font-size:13px">Clique em <strong>+ Novo Cliente</strong> para começar</div>
+      </div>`;
+    return;
+  }
   document.getElementById('clients-list').innerHTML = clients.map((c, ci) => {
     const totalHoje   = c.devices.reduce((a,d) => a+d.today, 0);
     const onlineCount = c.devices.filter(d=>d.status==='online').length;
