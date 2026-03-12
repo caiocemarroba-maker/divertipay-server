@@ -520,26 +520,32 @@
     </div>
 
     <!-- RESUMO -->
-    <div class="pay-summary" style="grid-template-columns:repeat(5,1fr)">
+    <div class="pay-summary" style="grid-template-columns:repeat(3,1fr);margin-bottom:8px">
       <div class="ps-card">
         <div class="ps-val" id="p-total" style="color:var(--green);font-size:15px">R$0</div>
-        <div class="ps-lbl">Total</div>
+        <div class="ps-lbl">Total Eletrônico</div>
       </div>
       <div class="ps-card">
         <div class="ps-val" id="p-count">0</div>
         <div class="ps-lbl">Vendas</div>
       </div>
+      <div class="ps-card" style="background:rgba(249,115,22,0.06);border:1.5px solid rgba(249,115,22,0.2)">
+        <div class="ps-val" id="p-manual" style="color:var(--accent);font-size:15px">—</div>
+        <div class="ps-lbl" style="color:var(--accent)">⚡ Crédito Manual</div>
+      </div>
+    </div>
+    <div class="pay-summary" style="grid-template-columns:repeat(3,1fr)">
       <div class="ps-card">
-        <div class="ps-val" id="p-pix" style="color:#22c55e">0%</div>
+        <div class="ps-val" id="p-pix" style="color:#22c55e">—</div>
         <div class="ps-lbl">PIX</div>
       </div>
       <div class="ps-card">
-        <div class="ps-val" id="p-debito" style="color:#8b5cf6">0%</div>
+        <div class="ps-val" id="p-debito" style="color:#8b5cf6">—</div>
         <div class="ps-lbl">Débito</div>
       </div>
       <div class="ps-card">
-        <div class="ps-val" id="p-credito" style="color:#3b82f6">0%</div>
-        <div class="ps-lbl">Crédito</div>
+        <div class="ps-val" id="p-credito" style="color:#3b82f6">—</div>
+        <div class="ps-lbl">Cartão Créd.</div>
       </div>
     </div>
 
@@ -554,43 +560,52 @@
     <div class="modal-title">⚡ Adicionar Crédito</div>
     <div class="modal-sub" id="modal-sub">Aparelho selecionado</div>
 
-    <!-- TIPO DE LANÇAMENTO -->
+    <!-- TIPO -->
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <button id="tipo-normal-btn" onclick="setPulsoTipo('manual_normal')"
         style="flex:1;padding:10px 8px;border-radius:11px;border:1.5px solid var(--accent);
                background:rgba(249,115,22,0.08);color:var(--accent);font-family:'Inter',sans-serif;
                font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;line-height:1.3">
-        ⚡ Pagamento Manual<br>
-        <span style="font-size:10px;font-weight:400;opacity:0.8">Soma ao montante</span>
+        ⚡ Crédito Manual<br>
+        <span style="font-size:10px;font-weight:400;opacity:0.8">Envia pulso + registra</span>
       </button>
       <button id="tipo-baixado-btn" onclick="setPulsoTipo('manual_baixado')"
         style="flex:1;padding:10px 8px;border-radius:11px;border:1.5px solid var(--border);
                background:none;color:var(--muted);font-family:'Inter',sans-serif;
                font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;line-height:1.3">
         💵 Dinheiro Manual<br>
-        <span style="font-size:10px;font-weight:400;opacity:0.8">Não soma (baixado)</span>
+        <span style="font-size:10px;font-weight:400;opacity:0.8">Só registra (sem pulso)</span>
       </button>
     </div>
 
-    <div class="pulse-big" id="pulse-big-box">
-      <div class="pulse-num" id="p-num">5</div>
-      <div class="pulse-desc">pulsos a enviar</div>
+    <!-- PULSOS — só no modo crédito -->
+    <div id="pulsos-section">
+      <div class="pulse-big" id="pulse-big-box">
+        <div class="pulse-num" id="p-num">1</div>
+        <div class="pulse-desc">pulsos a enviar</div>
+      </div>
+      <div class="pulse-row">
+        <button class="pctl" onclick="chg(-5)">−5</button>
+        <button class="pctl" onclick="chg(-1)">−1</button>
+        <button class="pctl" onclick="chg(+1)">+1</button>
+        <button class="pctl" onclick="chg(+5)">+5</button>
+      </div>
     </div>
-    <div class="pulse-row">
-      <button class="pctl" onclick="chg(-5)">−5</button>
-      <button class="pctl" onclick="chg(-1)">−1</button>
-      <button class="pctl" onclick="chg(+1)">+1</button>
-      <button class="pctl" onclick="chg(+5)">+5</button>
+
+    <!-- VALOR LIVRE -->
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px">
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Valor em R$</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px;font-weight:700;color:var(--muted)">R$</span>
+        <input type="number" id="inp-valor-credito" min="0" step="0.01" placeholder="Ex: 5.00"
+          style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:18px;font-weight:700;font-family:'Inter',sans-serif;outline:none;text-align:right"
+          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;margin:0 0 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px">
-      <span style="font-size:13px;color:var(--muted);font-weight:600">Valor R$</span>
-      <input type="number" id="inp-valor-credito" min="0" step="0.01" placeholder="0.00" value=""
-        style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-weight:700;font-family:'Inter',sans-serif;outline:none;text-align:right"
-        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-    </div>
+
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
-      <button class="btn-send" id="btn-send-pulse" onclick="sendPulse()">⚡ Enviar Crédito</button>
+      <button class="btn-send" id="btn-send-pulse" onclick="sendPulse()">⚡ Enviar</button>
     </div>
   </div>
 </div>
@@ -632,6 +647,13 @@ function tick() {
   if (el) el.textContent = `${p(n.getHours())}:${p(n.getMinutes())}`;
 }
 tick(); setInterval(tick, 10000);
+
+// Auto-refresh dos aparelhos a cada 10s
+setInterval(async () => {
+  if (document.getElementById('devices')?.classList.contains('active')) {
+    await carregarDados();
+  }
+}, 10000);
 
 // ── LOGIN ──
 let manterConectado = false;
@@ -1004,12 +1026,16 @@ function clearDeviceFilter() {
 }
 
 function calcTotals(list) {
-  // Normal + manual_normal confirmados e NÃO recolhidos = somam
-  const somam    = list.filter(p => p.ok && !p.recolhido && p.tipo !== 'manual_baixado');
-  const baixados = list.filter(p => p.ok && p.tipo === 'manual_baixado');
-  const recolhidos = list.filter(p => p.ok && p.recolhido);
-  const totalBruto = somam.reduce((a,p) => a+p.val, 0);
-  return { somam, baixados, recolhidos, totalBruto };
+  // Pagamentos eletrônicos (PIX, cartão, noteiro) — não inclui crédito manual
+  const eletronicos = list.filter(p => p.ok && !p.recolhido && p.tipo !== 'manual_baixado' && p.tipo !== 'manual_normal');
+  // Créditos manuais — campo separado
+  const manuais     = list.filter(p => p.ok && !p.recolhido && p.tipo === 'manual_normal');
+  const baixados    = list.filter(p => p.ok && p.tipo === 'manual_baixado');
+  const recolhidos  = list.filter(p => p.ok && p.recolhido);
+  const totalElet   = eletronicos.reduce((a,p) => a+p.val, 0);
+  const totalManual = manuais.reduce((a,p) => a+p.val, 0);
+  const totalBruto  = totalElet; // total principal só conta eletrônicos
+  return { eletronicos, manuais, baixados, recolhidos, totalBruto, totalElet, totalManual };
 }
 
 function toggleRecolhido(id) {
@@ -1022,27 +1048,29 @@ function toggleRecolhido(id) {
 }
 
 function renderPayments(list) {
-  const { somam, baixados, recolhidos, totalBruto } = calcTotals(list);
+  const { eletronicos, manuais, baixados, recolhidos, totalBruto, totalElet, totalManual } = calcTotals(list);
 
-  // só contar eletrônicos confirmados (PIX, Débito, Crédito) para as %
-  const eletronicos = list.filter(p => p.ok && ['PIX','Débito','Crédito'].includes(p.method) && !p.recolhido && p.tipo !== 'manual_baixado');
+  // % por método — só eletrônicos
   const nPix     = eletronicos.filter(p=>p.method==='PIX').length;
   const nDebito  = eletronicos.filter(p=>p.method==='Débito').length;
   const nCredito = eletronicos.filter(p=>p.method==='Crédito').length;
-  const totalElet = eletronicos.length || 1;
+  const nElet    = eletronicos.length || 1;
 
-  const pixPct    = eletronicos.length ? Math.round(nPix    / totalElet * 100) : 0;
-  const debitoPct = eletronicos.length ? Math.round(nDebito / totalElet * 100) : 0;
-  const creditoPct= eletronicos.length ? Math.round(nCredito/ totalElet * 100) : 0;
+  const pixPct    = eletronicos.length ? Math.round(nPix    / nElet * 100) : 0;
+  const debitoPct = eletronicos.length ? Math.round(nDebito / nElet * 100) : 0;
+  const creditoPct= eletronicos.length ? Math.round(nCredito/ nElet * 100) : 0;
 
-  // contar só vendas reais (confirmadas, não baixadas, não recolhidas)
-  const vendas = list.filter(p => p.ok && p.tipo !== 'manual_baixado' && !p.recolhido).length;
+  // vendas eletrônicas confirmadas (não inclui crédito manual)
+  const vendas = eletronicos.length;
 
-  document.getElementById('p-total').textContent   = 'R$' + totalBruto.toLocaleString('pt-BR');
+  document.getElementById('p-total').textContent   = 'R$' + totalElet.toLocaleString('pt-BR', {minimumFractionDigits:2});
   document.getElementById('p-count').textContent   = vendas;
   document.getElementById('p-pix').textContent     = nPix    > 0 ? pixPct    + '% (' + nPix    + ')' : '—';
   document.getElementById('p-debito').textContent  = nDebito > 0 ? debitoPct + '% (' + nDebito + ')' : '—';
   document.getElementById('p-credito').textContent = nCredito> 0 ? creditoPct+ '% (' + nCredito+ ')' : '—';
+  // crédito manual — campo separado
+  const elManual = document.getElementById('p-manual');
+  if (elManual) elManual.textContent = manuais.length > 0 ? 'R$' + totalManual.toLocaleString('pt-BR', {minimumFractionDigits:2}) + ' (' + manuais.length + ')' : '—';
 
   if (list.length === 0) {
     document.getElementById('payments-list').innerHTML =
@@ -1231,20 +1259,22 @@ let pulsoTipo = 'manual_normal';
 
 function openModal(id, name) {
   pulseTarget = id;
-  pulseCount  = 5;
+  pulseCount  = 1;
   pulsoTipo   = 'manual_normal';
   document.getElementById('p-num').textContent     = pulseCount;
   document.getElementById('modal-sub').textContent = 'Aparelho: ' + name;
+  document.getElementById('inp-valor-credito').value = '';
   setPulsoTipo('manual_normal');
   document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('inp-valor-credito').focus(), 300);
 }
 
 function setPulsoTipo(tipo) {
   pulsoTipo = tipo;
-  const btnN = document.getElementById('tipo-normal-btn');
-  const btnB = document.getElementById('tipo-baixado-btn');
-  const box  = document.getElementById('pulse-big-box');
-  const btn  = document.getElementById('btn-send-pulse');
+  const btnN    = document.getElementById('tipo-normal-btn');
+  const btnB    = document.getElementById('tipo-baixado-btn');
+  const btn     = document.getElementById('btn-send-pulse');
+  const secPulso = document.getElementById('pulsos-section');
 
   if (tipo === 'manual_normal') {
     btnN.style.border     = '1.5px solid var(--accent)';
@@ -1253,11 +1283,9 @@ function setPulsoTipo(tipo) {
     btnB.style.border     = '1.5px solid var(--border)';
     btnB.style.background = 'none';
     btnB.style.color      = 'var(--muted)';
-    box.style.background  = '#f0fdf4';
-    box.style.borderColor = '#bbf7d0';
-    document.getElementById('p-num').style.color = 'var(--green)';
     btn.textContent = '⚡ Enviar Crédito';
     btn.style.background = 'linear-gradient(135deg,var(--green),#16a34a)';
+    if (secPulso) secPulso.style.display = 'block';
   } else {
     btnB.style.border     = '1.5px solid #b45309';
     btnB.style.background = 'rgba(180,83,9,0.08)';
@@ -1265,11 +1293,9 @@ function setPulsoTipo(tipo) {
     btnN.style.border     = '1.5px solid var(--border)';
     btnN.style.background = 'none';
     btnN.style.color      = 'var(--muted)';
-    box.style.background  = '#fffbeb';
-    box.style.borderColor = '#fde68a';
-    document.getElementById('p-num').style.color = '#b45309';
     btn.textContent = '💵 Registrar Dinheiro';
     btn.style.background = 'linear-gradient(135deg,#f59e0b,#b45309)';
+    if (secPulso) secPulso.style.display = 'none';
   }
 }
 
@@ -1292,6 +1318,7 @@ async function sendPulse() {
       const data = await api('POST', '/devices/' + pulseTarget + '/pulse', { pulsos: pulseCount, valor: valorInput });
       if (data.ok) {
         showToast('✅ Crédito enviado! O aparelho receberá em até 3s.');
+        setTimeout(() => carregarDados(), 3500); // recarrega após ESP executar
         if (idx >= 0) {
           devices[idx].today = (devices[idx].today || 0) + valorInput;
           devices[idx].sales = (devices[idx].sales || 0) + 1;
