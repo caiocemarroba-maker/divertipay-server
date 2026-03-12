@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TarifaPay — Master</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:     #f4f6f9;
+    --card:   #ffffff;
+    --border: #e8ecf0;
+    --text:   #1a1a2e;
+    --muted:  #8a94a6;
+    --accent: #f97316;
+    --green:  #22c55e;
+    --red:    #ef4444;
+    --yellow: #f59e0b;
+    --blue:   #3b82f6;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  .screen { display:none; min-height:100vh; flex-direction:column; }
+  .screen.active { display:flex; }
+
+  /* ── LOGIN ── */
+  #login {
+    align-items:center; justify-content:center; padding:24px;
+    background:linear-gradient(160deg,#fff7ed 0%,#f4f6f9 60%); min-height:100vh;
+  }
+  .login-box {
+    width:100%; max-width:380px; background:var(--card);
+    border-radius:20px; padding:40px 32px;
+    box-shadow:0 4px 32px rgba(0,0,0,0.08); border:1px solid var(--border);
+    animation:up 0.5s ease both;
+  }
+  @keyframes up { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  .brand { text-align:center; margin-bottom:28px; }
+  .brand-icon {
+    width:56px; height:56px; background:linear-gradient(135deg,var(--accent),#ea580c);
+    border-radius:16px; display:inline-flex; align-items:center; justify-content:center;
+    font-size:26px; margin-bottom:12px; box-shadow:0 8px 20px rgba(249,115,22,0.3);
+  }
+  .brand-name { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; }
+  .brand-name span { color:var(--accent); }
+  .brand-badge {
+    display:inline-block; margin-top:6px; padding:3px 12px;
+    background:rgba(249,115,22,0.1); border:1px solid rgba(249,115,22,0.25);
+    border-radius:20px; font-size:11px; font-weight:700;
+    color:var(--accent); letter-spacing:1px; text-transform:uppercase;
+  }
+  .field { margin-bottom:14px; }
+  .field label { display:block; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:6px; }
+  .field input {
+    width:100%; padding:13px 15px; border:1.5px solid var(--border); border-radius:12px;
+    font-family:'DM Sans',sans-serif; font-size:15px; color:var(--text);
+    background:#fafafa; outline:none; transition:all 0.2s;
+  }
+  .field input:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px rgba(249,115,22,0.1); }
+  .btn-primary {
+    width:100%; padding:15px; margin-top:6px;
+    background:linear-gradient(135deg,var(--accent),#ea580c);
+    border:none; border-radius:12px; color:white;
+    font-family:'Syne',sans-serif; font-size:16px; font-weight:700;
+    cursor:pointer; box-shadow:0 4px 16px rgba(249,115,22,0.3); transition:all 0.2s;
+  }
+  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 22px rgba(249,115,22,0.4); }
+  .login-foot { text-align:center; margin-top:24px; font-size:12px; color:var(--muted); line-height:1.9; }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    background:var(--card); border-bottom:1px solid var(--border);
+    padding:10px 16px 0; display:flex; flex-direction:column;
+    position:sticky; top:0; z-index:50;
+  }
+  .tb-row1 { display:flex; align-items:center; gap:10px; padding-bottom:10px; }
+  .tb-row2 {
+    display:flex; gap:6px; padding-bottom:10px;
+    overflow-x:auto; scrollbar-width:none;
+  }
+  .tb-row2::-webkit-scrollbar { display:none; }
+  .tb-brand { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; flex:1; display:flex; align-items:center; gap:8px; }
+  .tb-icon { width:30px; height:30px; background:linear-gradient(135deg,var(--accent),#ea580c); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+  .tb-brand span { color:var(--accent); }
+  .tb-master-badge {
+    padding:3px 10px; background:rgba(249,115,22,0.1); border:1px solid rgba(249,115,22,0.3);
+    border-radius:20px; font-size:10px; font-weight:700; color:var(--accent); letter-spacing:0.8px; flex-shrink:0;
+  }
+  .tb-user {
+    display:flex; align-items:center; gap:8px; padding:5px 10px;
+    background:var(--bg); border:1px solid var(--border); border-radius:10px;
+    font-size:13px; font-weight:600; cursor:pointer; flex-shrink:0;
+  }
+  .tb-avatar {
+    width:26px; height:26px; border-radius:7px;
+    background:linear-gradient(135deg,var(--accent),#c2410c);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700; color:white;
+  }
+
+  /* ── CONTENT ── */
+  .content { flex:1; padding:18px 16px; max-width:720px; margin:0 auto; width:100%; }
+
+  /* SUMMARY CARDS */
+  .summary { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px; }
+  .sum-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px 12px; text-align:center; }
+  .sum-val { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; line-height:1; margin-bottom:4px; }
+  .sum-lbl { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+
+  /* SECTION */
+  .sec-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .sec-title { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; }
+  .sec-btn {
+    padding:7px 14px; border:1.5px solid var(--border); border-radius:10px;
+    background:none; font-family:'DM Sans',sans-serif; font-size:13px;
+    font-weight:600; color:var(--accent); cursor:pointer; transition:all 0.15s;
+  }
+  .sec-btn:hover { background:rgba(249,115,22,0.06); border-color:var(--accent); }
+
+  /* CLIENT CARD */
+  .client-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:16px; margin-bottom:12px; overflow:hidden;
+    transition:all 0.15s;
+  }
+  .client-card:hover { border-color:#fbd38d; box-shadow:0 2px 16px rgba(249,115,22,0.08); }
+
+  .client-header {
+    padding:14px 16px; display:flex; align-items:center; gap:12px; cursor:pointer;
+  }
+
+  .client-avatar {
+    width:40px; height:40px; border-radius:12px; flex-shrink:0;
+    background:linear-gradient(135deg,var(--accent),#c2410c);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:white;
+  }
+
+  .client-info { flex:1; min-width:0; }
+  .client-name { font-size:15px; font-weight:700; }
+  .client-meta { font-size:12px; color:var(--muted); margin-top:2px; }
+
+  .client-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+
+  .client-revenue {
+    text-align:right;
+  }
+  .rev-val { font-family:'Syne',sans-serif; font-size:16px; font-weight:800; color:var(--green); }
+  .rev-lbl { font-size:11px; color:var(--muted); }
+
+  /* DIAS BADGE */
+  .days-chip {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-width:40px; height:40px; border-radius:10px; padding:0 8px;
+    border:1.5px solid var(--border); flex-shrink:0;
+  }
+  .days-chip .dc-num { font-family:'Syne',sans-serif; font-size:16px; font-weight:800; line-height:1; }
+  .days-chip .dc-lbl { font-size:9px; font-weight:600; color:var(--muted); letter-spacing:0.3px; text-transform:uppercase; }
+
+  .chevron { font-size:14px; color:var(--muted); transition:transform 0.2s; flex-shrink:0; }
+  .chevron.open { transform:rotate(180deg); }
+
+  /* DEVICES EXPANDIDO */
+  .client-devices { border-top:1px solid var(--border); display:none; }
+  .client-devices.open { display:block; }
+
+  .dev-row {
+    padding:11px 16px; display:flex; align-items:center; gap:10px;
+    border-bottom:1px solid var(--border); transition:background 0.1s;
+  }
+  .dev-row:last-child { border-bottom:none; }
+  .dev-row:hover { background:rgba(249,115,22,0.02); }
+
+  .dev-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .dot-on   { background:var(--green);  box-shadow:0 0 0 3px rgba(34,197,94,0.18); }
+  .dot-off  { background:var(--muted); }
+  .dot-warn { background:var(--yellow); box-shadow:0 0 0 3px rgba(245,158,11,0.18); }
+
+  .dev-name-col { flex:1; min-width:0; }
+  .dev-n  { font-size:13px; font-weight:600; }
+  .dev-id { font-size:11px; color:var(--muted); margin-top:1px; }
+
+  .dev-val-col { font-family:'Syne',sans-serif; font-size:13px; font-weight:800; color:var(--green); text-align:right; flex-shrink:0; }
+  .dev-val-col small { display:block; font-family:'DM Sans',sans-serif; font-size:10px; font-weight:400; color:var(--muted); }
+
+  /* ACESSO PAINEL BTN */
+  .add-days-btn {
+    width:26px; height:26px; border-radius:7px;
+    border:1.5px solid var(--border); background:var(--card);
+    font-size:16px; font-weight:700; color:var(--green);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:all 0.15s; flex-shrink:0; line-height:1;
+  }
+  .add-days-btn:hover { border-color:var(--green); background:rgba(34,197,94,0.08); transform:scale(1.1); }
+
+  .add-days-btn {
+    padding:7px 14px; border-radius:10px;
+    background:linear-gradient(135deg,var(--accent),#ea580c);
+    border:none; color:white;
+    font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600;
+    cursor:pointer; transition:all 0.15s; white-space:nowrap;
+    box-shadow:0 2px 8px rgba(249,115,22,0.25);
+  }
+  .btn-access:hover { box-shadow:0 4px 14px rgba(249,115,22,0.4); transform:translateY(-1px); }
+
+  /* VENCIMENTOS */
+  .venc-section { margin-top:20px; }
+  .venc-item {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:13px; padding:13px 16px; margin-bottom:8px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .venc-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .venc-info { flex:1; }
+  .venc-name { font-size:13px; font-weight:600; }
+  .venc-date { font-size:12px; color:var(--muted); margin-top:1px; }
+
+  /* PILLS */
+  .pill {
+    padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;
+    display:inline-flex; align-items:center; gap:4px; flex-shrink:0;
+  }
+  .pill-green  { background:rgba(34,197,94,0.1);  color:var(--green);  border:1px solid rgba(34,197,94,0.2); }
+  .pill-yellow { background:rgba(245,158,11,0.1); color:var(--yellow); border:1px solid rgba(245,158,11,0.2); }
+  .pill-red    { background:rgba(239,68,68,0.1);  color:var(--red);    border:1px solid rgba(239,68,68,0.2); }
+
+  /* TOAST */
+  /* MODAL ADICIONAR DIAS */
+  .overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.4);
+    backdrop-filter:blur(6px); z-index:100;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .overlay.open { display:flex; animation:fadeIn 0.2s ease; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .modal {
+    background:var(--card); border-radius:24px 24px 0 0;
+    padding:24px 22px 40px; width:100%; max-width:480px;
+    animation:slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .modal-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 20px; }
+  .modal-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; margin-bottom:4px; }
+  .modal-sub   { font-size:13px; color:var(--muted); margin-bottom:22px; }
+  .days-big {
+    text-align:center; padding:22px;
+    background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:16px; margin-bottom:18px;
+  }
+  .days-big-num { font-family:'Syne',sans-serif; font-size:64px; font-weight:800; color:var(--green); line-height:1; }
+  .days-big-lbl { font-size:13px; color:var(--muted); margin-top:6px; }
+  .days-row { display:flex; gap:8px; margin-bottom:18px; }
+  .dctl {
+    flex:1; padding:13px; border-radius:12px; border:1.5px solid var(--border);
+    background:none; font-family:'DM Sans',sans-serif; font-size:18px; font-weight:700;
+    cursor:pointer; color:var(--text); transition:all 0.15s;
+  }
+  .dctl:hover { border-color:var(--green); color:var(--green); background:rgba(34,197,94,0.05); }
+  .modal-btns { display:flex; gap:10px; }
+  .btn-cancel-m {
+    flex:1; padding:14px; border-radius:12px; border:1.5px solid var(--border);
+    background:none; font-family:'DM Sans',sans-serif; font-size:14px;
+    font-weight:600; color:var(--muted); cursor:pointer;
+  }
+  .btn-confirm-m {
+    flex:2; padding:14px; border-radius:12px; border:none;
+    background:linear-gradient(135deg,var(--green),#16a34a); color:white;
+    font-family:'Syne',sans-serif; font-size:15px; font-weight:700;
+    cursor:pointer; box-shadow:0 4px 14px rgba(34,197,94,0.3); transition:all 0.15s;
+  }
+  .btn-confirm-m:hover { box-shadow:0 6px 20px rgba(34,197,94,0.4); }
+
+  /* TABS */
+  .tab-btn {
+    padding:8px 14px; border-radius:10px; border:1.5px solid var(--border);
+    background:none; font-family:'DM Sans',sans-serif; font-size:13px;
+    font-weight:600; color:var(--muted); cursor:pointer; transition:all 0.15s;
+  }
+  .tab-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .tab-btn.active {
+    background:linear-gradient(135deg,var(--accent),#ea580c);
+    border-color:transparent; color:white;
+    box-shadow:0 2px 8px rgba(249,115,22,0.3);
+  }
+
+  /* FIN ITEM */
+  .fin-item {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:13px; padding:13px 16px; margin-bottom:8px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .fin-icon { width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .fin-info { flex:1; min-width:0; }
+  .fin-name { font-size:14px; font-weight:600; }
+  .fin-meta { font-size:12px; color:var(--muted); margin-top:2px; }
+  .fin-right { text-align:right; flex-shrink:0; }
+  .fin-val  { font-family:'Syne',sans-serif; font-size:16px; font-weight:800; color:var(--green); }
+  .fin-days { font-size:11px; color:var(--muted); margin-top:2px; }
+
+  .toast {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    padding:12px 22px; background:var(--text); color:white;
+    border-radius:30px; font-size:14px; font-weight:600;
+    white-space:nowrap; z-index:300; display:none;
+    animation:toastIn 0.3s ease;
+  }
+  @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+  .toast.show { display:block; }
+
+  @media(max-width:480px) {
+    .summary { grid-template-columns:repeat(2,1fr); }
+    .content { padding:14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN MASTER -->
+<div id="login" class="screen active">
+  <div class="login-box" style="margin:auto">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-name">Tarifa<span>Pay</span></div>
+      <div class="brand-badge">Master</div>
+    </div>
+    <div class="field">
+      <label>E-mail</label>
+      <input type="text" id="inp-user" placeholder="master@tarifapay.com">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="inp-pass" placeholder="••••••••">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Entrar como Master</button>
+    <div class="login-foot">
+      TarifaPay © 2026 · Acesso Restrito<br>
+      <span id="clock"></span>
+    </div>
+  </div>
+</div>
+
+<!-- PAINEL MASTER -->
+<div id="master" class="screen">
+  <div class="topbar">
+    <div class="tb-row1">
+      <div class="tb-brand">
+        <div class="tb-icon">⚡</div>
+        DivertiPay<span> </span>
+        <span class="tb-master-badge">MASTER</span>
+      </div>
+      <div class="tb-user" onclick="doLogout()">
+        <div class="tb-avatar">M</div>
+        <span>Master</span>
+      </div>
+    </div>
+    <div class="tb-row2">
+      <button class="tab-btn active" id="tab-clientes" onclick="switchTab('clientes')" style="white-space:nowrap">👥 Clientes</button>
+      <button class="tab-btn" id="tab-financeiro" onclick="switchTab('financeiro')" style="white-space:nowrap">💰 Financeiro</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- RESUMO GERAL -->
+    <div class="summary">
+      <div class="sum-card">
+        <div class="sum-val" id="s-clientes" style="color:var(--accent)">0</div>
+        <div class="sum-lbl">Clientes</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-val" id="s-aparelhos">0</div>
+        <div class="sum-lbl">Aparelhos</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-val" id="s-online" style="color:var(--green)">0</div>
+        <div class="sum-lbl">Online</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-val" id="s-hoje" style="color:var(--green)">R$0</div>
+        <div class="sum-lbl">Hoje</div>
+      </div>
+    </div>
+
+    <!-- TAB CLIENTES -->
+    <div id="panel-clientes">
+
+      <!-- CLIENTES -->
+      <div class="sec-head">
+        <div class="sec-title">👥 Clientes</div>
+        <button class="sec-btn" onclick="showToast('Em breve: adicionar cliente')">+ Novo Cliente</button>
+      </div>
+      <div id="clients-list"></div>
+
+      <!-- VENCIMENTOS PRÓXIMOS -->
+      <div class="venc-section">
+        <div class="sec-head">
+          <div class="sec-title">📅 Vencimentos Próximos</div>
+        </div>
+        <div id="venc-list"></div>
+      </div>
+    </div>
+
+    <!-- TAB FINANCEIRO -->
+    <div id="panel-financeiro" style="display:none">
+
+      <!-- RESUMO FINANCEIRO -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px" id="fin-summary"></div>
+
+      <!-- FILTRO -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px">🔎 Filtrar</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Data início</label>
+            <input type="date" id="fin-start" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:#fafafa;outline:none">
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Data fim</label>
+            <input type="date" id="fin-end" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:#fafafa;outline:none">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="filterFinanceiro()" style="flex:1;padding:10px;background:linear-gradient(135deg,var(--accent),#ea580c);border:none;border-radius:10px;color:white;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Filtrar</button>
+          <button onclick="filterFinanceiro(true)" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer">Limpar</button>
+        </div>
+      </div>
+
+      <!-- LISTA DE PAGAMENTOS -->
+      <div class="sec-head">
+        <div class="sec-title">💳 Pagamentos de Mensalidade</div>
+      </div>
+      <div id="fin-list"></div>
+
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL ADICIONAR DIAS -->
+<div class="overlay" id="modal-days">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📅 Adicionar Dias</div>
+    <div class="modal-sub" id="days-modal-sub">Cliente selecionado</div>
+    <div class="days-big">
+      <div class="days-big-num" id="days-add-num">30</div>
+      <div class="days-big-lbl">dias a adicionar</div>
+    </div>
+    <div class="days-row">
+      <button class="dctl" onclick="chgDays(-15)">−15</button>
+      <button class="dctl" onclick="chgDays(-1)">−1</button>
+      <button class="dctl" onclick="chgDays(+1)">+1</button>
+      <button class="dctl" onclick="chgDays(+15)">+15</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel-m" onclick="closeAddDays()">Cancelar</button>
+      <button class="btn-confirm-m" onclick="confirmAddDays()">✅ Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── API ──
+const API_URL = 'https://divertipay-server-production.up.railway.app';
+const MASTER_EMAIL = 'master@divertipay.com';
+const MASTER_SENHA = 'master2024';
+
+async function api(method, path, body = null) {
+  const token = localStorage.getItem('dp_master_token');
+  const res = await fetch(API_URL + path, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+    },
+    body: body ? JSON.stringify(body) : null
+  });
+  return res.json();
+}
+
+// ── DADOS (carregados da API) ──
+let clients = [];
+
+// ── CLOCK ──
+function tick() {
+  const n = new Date(), p = v => String(v).padStart(2,'0');
+  const el = document.getElementById('clock');
+  if (el) el.textContent = `${p(n.getHours())}:${p(n.getMinutes())}`;
+}
+tick(); setInterval(tick, 10000);
+
+// ── LOGIN ──
+async function doLogin() {
+  const u = document.getElementById('inp-user').value.trim();
+  const p = document.getElementById('inp-pass').value.trim();
+  if (!u || !p) { showToast('Preencha email e senha'); return; }
+  // Login master fixo por enquanto
+  if (u !== MASTER_EMAIL || p !== MASTER_SENHA) {
+    showToast('Credenciais master incorretas'); return;
+  }
+  goTo('master');
+  await carregarClientes();
+}
+
+async function carregarClientes() {
+  showToast('Carregando clientes...');
+  try {
+    const data = await api('GET', '/master/clients');
+    if (!Array.isArray(data)) { clients = []; renderAll(); return; }
+    clients = data.map(c => {
+      const expira = c.plano_expira ? new Date(c.plano_expira) : new Date();
+      const hoje   = new Date();
+      const dias   = Math.max(0, Math.ceil((expira - hoje) / (1000*60*60*24)));
+      return {
+        id:       String(c.id),
+        name:     c.nome,
+        email:    c.email,
+        daysLeft: dias,
+        plat:     'MP',
+        devices:  (c.aparelhos || []).map(d => ({
+          id:     d.token || String(d.id),
+          name:   d.nome,
+          mpId:   d.token?.substring(0,8) || '',
+          status: d.online ? 'online' : 'offline',
+          today:  0,
+          sales:  0
+        }))
+      };
+    });
+    renderAll();
+  } catch(e) {
+    showToast('Erro ao carregar clientes');
+    clients = [];
+    renderAll();
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('dp_master_token');
+  goTo('login');
+}
+
+function goTo(s) {
+  document.querySelectorAll('.screen').forEach(x => x.classList.remove('active'));
+  document.getElementById(s).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── RENDER ──
+function renderAll() {
+  const totalDevices = clients.reduce((a,c) => a + c.devices.length, 0);
+  const totalOnline  = clients.reduce((a,c) => a + c.devices.filter(d=>d.status==='online').length, 0);
+  const totalHoje    = clients.reduce((a,c) => a + c.devices.reduce((b,d) => b+d.today, 0), 0);
+
+  document.getElementById('s-clientes').textContent  = clients.length;
+  document.getElementById('s-aparelhos').textContent = totalDevices;
+  document.getElementById('s-online').textContent    = totalOnline;
+  document.getElementById('s-hoje').textContent      = 'R$' + totalHoje.toLocaleString('pt-BR');
+
+  renderClients();
+  renderVencimentos();
+}
+
+function renderClients() {
+  document.getElementById('clients-list').innerHTML = clients.map((c, ci) => {
+    const totalHoje   = c.devices.reduce((a,d) => a+d.today, 0);
+    const onlineCount = c.devices.filter(d=>d.status==='online').length;
+
+    // dias badge color
+    let daysColor = 'var(--text)', daysBg = 'var(--bg)', daysBorder = 'var(--border)';
+    if (c.daysLeft <= 5)  { daysColor='var(--red)';    daysBg='rgba(239,68,68,0.08)';  daysBorder='rgba(239,68,68,0.3)'; }
+    else if (c.daysLeft <= 10) { daysColor='var(--yellow)'; daysBg='rgba(245,158,11,0.08)'; daysBorder='rgba(245,158,11,0.3)'; }
+
+    const devRows = c.devices.map(d => {
+      const dotClass = d.status==='online' ? 'dot-on' : d.status==='alert' ? 'dot-warn' : 'dot-off';
+      return `
+        <div class="dev-row">
+          <span class="dev-dot ${dotClass}"></span>
+          <div class="dev-name-col">
+            <div class="dev-n">
+              <span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(249,115,22,0.1);padding:1px 6px;border-radius:5px;margin-right:6px">${d.id}</span>${d.name}
+            </div>
+            <div class="dev-id">MP: ${d.mpId}</div>
+          </div>
+          <div class="dev-val-col">
+            ${d.today > 0 ? 'R$'+d.today.toLocaleString('pt-BR') : '—'}
+            <small>${d.sales > 0 ? d.sales+' vendas' : ''}</small>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="client-card">
+        <div class="client-header" onclick="toggleClient(${ci})">
+          <div class="client-avatar">${c.name[0]}</div>
+          <div class="client-info">
+            <div class="client-name">${c.name}</div>
+            <div class="client-meta">${c.devices.length} aparelhos &nbsp;·&nbsp; ${onlineCount} online &nbsp;·&nbsp; <span style="color:${c.plat==='MP'?'var(--blue)':'var(--accent)'}">${c.plat}</span></div>
+          </div>
+          <div class="client-right">
+            <div class="client-revenue">
+              <div class="rev-val">${totalHoje > 0 ? 'R$'+totalHoje.toLocaleString('pt-BR') : '—'}</div>
+              <div class="rev-lbl">hoje</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px">
+              <div class="days-chip" style="background:${daysBg};border-color:${daysBorder}">
+                <span class="dc-num" style="color:${daysColor}">${String(c.daysLeft).padStart(2,'0')}</span>
+                <span class="dc-lbl">dias</span>
+              </div>
+              <button class="add-days-btn" title="Adicionar dias" onclick="event.stopPropagation();openAddDays(${ci},'${c.name}')">+</button>
+            </div>
+            <span class="chevron" id="chev-${ci}">▼</span>
+          </div>
+        </div>
+
+        <div class="client-devices" id="devs-${ci}">
+          ${devRows}
+          <div style="padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)">
+            <button class="btn-access" onclick="acessarPainel('${c.name}')">
+              Acessar Painel →
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderVencimentos() {
+  const sorted = [...clients].sort((a,b) => a.daysLeft - b.daysLeft);
+  document.getElementById('venc-list').innerHTML = sorted.map(c => {
+    let pillClass = 'pill-green', pillTxt = c.daysLeft + ' dias';
+    if (c.daysLeft <= 5)       { pillClass = 'pill-red';    pillTxt = '⚠️ '+c.daysLeft+'d'; }
+    else if (c.daysLeft <= 10) { pillClass = 'pill-yellow'; pillTxt = c.daysLeft+'d'; }
+
+    const icon = c.daysLeft <= 5 ? '🔴' : c.daysLeft <= 10 ? '🟡' : '🟢';
+    const bg   = c.daysLeft <= 5 ? '#fef2f2' : c.daysLeft <= 10 ? '#fffbeb' : '#f0fdf4';
+    const bd   = c.daysLeft <= 5 ? '#fecaca' : c.daysLeft <= 10 ? '#fde68a' : '#bbf7d0';
+
+    return `
+      <div class="venc-item">
+        <div class="venc-icon" style="background:${bg};border:1px solid ${bd}">${icon}</div>
+        <div class="venc-info">
+          <div class="venc-name">${c.name}</div>
+          <div class="venc-date">${c.devices.length} aparelhos · ${c.plat} · ${c.email}</div>
+        </div>
+        <span class="pill ${pillClass}">${pillTxt}</span>
+        <button class="btn-access" onclick="acessarPainel('${c.name}')">Painel →</button>
+      </div>`;
+  }).join('');
+}
+
+// ── EXPANDIR CLIENTE ──
+function toggleClient(ci) {
+  const devs = document.getElementById('devs-'+ci);
+  const chev = document.getElementById('chev-'+ci);
+  const isOpen = devs.classList.contains('open');
+  // fechar todos
+  document.querySelectorAll('.client-devices').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.chevron').forEach(c => c.classList.remove('open'));
+  // abrir clicado (se não estava aberto)
+  if (!isOpen) {
+    devs.classList.add('open');
+    chev.classList.add('open');
+  }
+}
+
+// ── ACESSAR PAINEL DO CLIENTE ──
+function acessarPainel(nome) {
+  showToast('Abrindo painel de ' + nome + '...');
+  // Aqui no futuro abre o painel_cliente.html em nova aba com token do cliente
+  setTimeout(() => { window.open('painel_cliente.html', '_blank'); }, 800);
+}
+
+// ── ADICIONAR DIAS ──
+let daysAddCount = 30;
+let daysTargetIdx = -1;
+
+function openAddDays(ci, name) {
+  daysTargetIdx = ci;
+  daysAddCount  = 30;
+  document.getElementById('days-add-num').textContent  = daysAddCount;
+  document.getElementById('days-modal-sub').textContent = 'Cliente: ' + name + ' · Atual: ' + clients[ci].daysLeft + ' dias';
+  document.getElementById('modal-days').classList.add('open');
+}
+
+function closeAddDays() {
+  document.getElementById('modal-days').classList.remove('open');
+  daysTargetIdx = -1;
+}
+
+function chgDays(v) {
+  daysAddCount = Math.max(1, Math.min(365, daysAddCount + v));
+  document.getElementById('days-add-num').textContent = daysAddCount;
+}
+
+function confirmAddDays() {
+  if (daysTargetIdx < 0) return;
+  clients[daysTargetIdx].daysLeft += daysAddCount;
+  closeAddDays();
+  renderAll();
+  showToast('✅ ' + daysAddCount + ' dias adicionados!');
+}
+
+document.getElementById('modal-days').addEventListener('click', function(e) {
+  if (e.target === this) closeAddDays();
+});
+
+// ── TABS ──
+function switchTab(tab) {
+  document.getElementById('panel-clientes').style.display   = tab === 'clientes'   ? 'block' : 'none';
+  document.getElementById('panel-financeiro').style.display = tab === 'financeiro' ? 'block' : 'none';
+  document.getElementById('tab-clientes').classList.toggle('active',   tab === 'clientes');
+  document.getElementById('tab-financeiro').classList.toggle('active', tab === 'financeiro');
+  if (tab === 'financeiro') renderFinanceiro();
+}
+
+// ── FINANCEIRO ──
+const pagamentosMensalidade = [
+  { cliente:'Caio Venâncio', valor:120, data:'2026-03-04', metodo:'PIX', status:'confirmado', dias:30 },
+  { cliente:'João Lima',     valor:120, data:'2026-03-03', metodo:'PIX', status:'confirmado', dias:30 },
+  { cliente:'Pedro Alves',   valor:120, data:'2026-03-02', metodo:'PIX', status:'confirmado', dias:30 },
+  { cliente:'Maria Souza',   valor:120, data:'2026-03-01', metodo:'PIX', status:'confirmado', dias:30 },
+  { cliente:'Caio Venâncio', valor:120, data:'2026-02-03', metodo:'PIX', status:'confirmado', dias:30 },
+  { cliente:'João Lima',     valor:120, data:'2026-02-01', metodo:'PIX', status:'confirmado', dias:30 },
+  { cliente:'Pedro Alves',   valor:120, data:'2026-01-31', metodo:'PIX', status:'confirmado', dias:30 },
+  { cliente:'Maria Souza',   valor:80,  data:'2026-01-28', metodo:'PIX', status:'confirmado', dias:30 },
+];
+
+let filteredFin = [...pagamentosMensalidade];
+
+function setFinDates() {
+  const now   = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const fmt   = d => d.toISOString().split('T')[0];
+  document.getElementById('fin-start').value = fmt(start);
+  document.getElementById('fin-end').value   = fmt(now);
+}
+
+function filterFinanceiro(clear) {
+  if (clear) {
+    filteredFin = [...pagamentosMensalidade];
+    setFinDates();
+  } else {
+    const s = document.getElementById('fin-start').value;
+    const e = document.getElementById('fin-end').value;
+    filteredFin = s && e
+      ? pagamentosMensalidade.filter(p => p.data >= s && p.data <= e)
+      : [...pagamentosMensalidade];
+  }
+  renderFinanceiro();
+}
+
+function renderFinanceiro() {
+  setFinDates();
+
+  const total    = filteredFin.filter(p=>p.status==='confirmado').reduce((a,p)=>a+p.valor,0);
+  const count    = filteredFin.length;
+  const clientes = [...new Set(filteredFin.map(p=>p.cliente))].length;
+
+  // Summary cards
+  document.getElementById('fin-summary').innerHTML = `
+    <div class="sum-card">
+      <div class="sum-val" style="color:var(--green)">R$${total.toLocaleString('pt-BR')}</div>
+      <div class="sum-lbl">Total Recebido</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val" style="color:var(--accent)">${count}</div>
+      <div class="sum-lbl">Pagamentos</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val">${clientes}</div>
+      <div class="sum-lbl">Clientes</div>
+    </div>`;
+
+  if (filteredFin.length === 0) {
+    document.getElementById('fin-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">📭 Nenhum pagamento no período</div>';
+    return;
+  }
+
+  document.getElementById('fin-list').innerHTML = filteredFin.map(p => {
+    const d = new Date(p.data + 'T12:00:00');
+    const dateFmt = d.toLocaleDateString('pt-BR');
+    return `
+      <div class="fin-item">
+        <div class="fin-icon" style="background:#f0fdf4;border:1px solid #bbf7d0">✅</div>
+        <div class="fin-info">
+          <div class="fin-name">${p.cliente}</div>
+          <div class="fin-meta">${p.metodo} · ${dateFmt} · <span style="color:var(--green);font-weight:600">${p.status}</span></div>
+        </div>
+        <div class="fin-right">
+          <div class="fin-val">R$${p.valor}</div>
+          <div class="fin-days">+${p.dias} dias</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

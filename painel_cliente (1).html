@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TarifaPay — Painel do Cliente</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg:     #f4f6f9;
+    --card:   #ffffff;
+    --border: #e8ecf0;
+    --text:   #1a1a2e;
+    --muted:  #8a94a6;
+    --accent: #f97316;
+    --green:  #22c55e;
+    --red:    #ef4444;
+    --yellow: #f59e0b;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  .screen { display:none; min-height:100vh; flex-direction:column; }
+  .screen.active { display:flex; }
+
+  /* ── LOGIN ── */
+  #login {
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: linear-gradient(160deg, #fff7ed 0%, #f4f6f9 60%);
+    min-height: 100vh;
+  }
+
+  .login-box {
+    width: 100%; max-width: 380px;
+    background: var(--card);
+    border-radius: 20px;
+    padding: 40px 32px;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+    border: 1px solid var(--border);
+    animation: up 0.5s ease both;
+  }
+
+  @keyframes up {
+    from { opacity:0; transform:translateY(16px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  .brand { text-align:center; margin-bottom:32px; }
+  .brand-icon {
+    width:56px; height:56px;
+    background: linear-gradient(135deg, var(--accent), #ea580c);
+    border-radius:16px;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:26px; margin-bottom:12px;
+    box-shadow: 0 8px 20px rgba(249,115,22,0.3);
+  }
+  .brand-name { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; }
+  .brand-name span { color:var(--accent); }
+  .brand-sub { font-size:13px; color:var(--muted); margin-top:2px; }
+
+  .field { margin-bottom:14px; }
+  .field label {
+    display:block; font-size:12px; font-weight:600; color:var(--muted);
+    text-transform:uppercase; letter-spacing:0.6px; margin-bottom:6px;
+  }
+  .field input {
+    width:100%; padding:13px 15px;
+    border:1.5px solid var(--border); border-radius:12px;
+    font-family:'DM Sans',sans-serif; font-size:15px; color:var(--text);
+    background:#fafafa; outline:none; transition:all 0.2s;
+  }
+  .field input:focus {
+    border-color:var(--accent); background:#fff;
+    box-shadow:0 0 0 3px rgba(249,115,22,0.1);
+  }
+
+  .btn-primary {
+    width:100%; padding:15px; margin-top:6px;
+    background:linear-gradient(135deg, var(--accent), #ea580c);
+    border:none; border-radius:12px; color:white;
+    font-family:'Syne',sans-serif; font-size:16px; font-weight:700;
+    cursor:pointer; box-shadow:0 4px 16px rgba(249,115,22,0.3);
+    transition:all 0.2s;
+  }
+  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 22px rgba(249,115,22,0.4); }
+  .btn-primary:active { transform:translateY(0); }
+
+  .login-foot {
+    text-align:center; margin-top:24px;
+    font-size:12px; color:var(--muted); line-height:1.9;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    background:var(--card); border-bottom:1px solid var(--border);
+    padding:10px 16px 0;
+    display:flex; flex-direction:column;
+    position:sticky; top:0; z-index:50;
+  }
+  .tb-row1 { display:flex; align-items:center; gap:10px; padding-bottom:10px; }
+  .tb-row2 {
+    display:flex; gap:6px; padding-bottom:10px;
+    overflow-x:auto; scrollbar-width:none;
+  }
+  .tb-row2::-webkit-scrollbar { display:none; }
+  .tb-brand {
+    font-family:'Syne',sans-serif; font-size:18px; font-weight:800;
+    flex:1; display:flex; align-items:center; gap:8px;
+  }
+  .tb-icon {
+    width:30px; height:30px;
+    background:linear-gradient(135deg,var(--accent),#ea580c);
+    border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-size:15px; flex-shrink:0;
+  }
+  .tb-brand span { color:var(--accent); }
+  .tb-user {
+    display:flex; align-items:center; gap:8px;
+    padding:5px 10px;
+    background:var(--bg); border:1px solid var(--border); border-radius:10px;
+    font-size:13px; font-weight:600; cursor:pointer; flex-shrink:0;
+  }
+  .tb-avatar {
+    width:26px; height:26px; border-radius:7px;
+    background:linear-gradient(135deg,var(--accent),#c2410c);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700; color:white;
+  }
+
+  .tb-back {
+    padding:8px 14px; border:1.5px solid var(--border); border-radius:10px;
+    background:none; font-family:'DM Sans',sans-serif; font-size:13px;
+    font-weight:600; color:var(--muted); cursor:pointer; transition:all 0.15s;
+  }
+  .tb-back:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ── CONTENT ── */
+  .content {
+    flex:1; padding:18px 16px;
+    max-width:680px; margin:0 auto; width:100%;
+  }
+
+  /* SUMÁRIO */
+  .summary {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px;
+  }
+  .sum-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; padding:14px 12px; text-align:center;
+  }
+  .sum-val {
+    font-family:'Syne',sans-serif; font-size:20px; font-weight:800; line-height:1; margin-bottom:4px;
+  }
+  .sum-lbl { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+
+  /* SECTION HEAD */
+  .sec-head {
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
+  }
+  .sec-title { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; }
+  .sec-btn {
+    padding:7px 14px; border:1.5px solid var(--border); border-radius:10px;
+    background:none; font-family:'DM Sans',sans-serif; font-size:13px;
+    font-weight:600; color:var(--accent); cursor:pointer; transition:all 0.15s;
+  }
+  .sec-btn:hover { background:rgba(249,115,22,0.06); border-color:var(--accent); }
+
+  /* DEVICE ITEM */
+  /* ── CASH COUNTER ── */
+  .cash-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:3px 9px; border-radius:20px; cursor:pointer;
+    border:1.5px solid rgba(34,197,94,0.3);
+    background:rgba(34,197,94,0.07);
+    transition:all 0.15s; margin-top:5px;
+    font-size:11px; font-weight:700; color:#15803d;
+    user-select:none;
+  }
+  .cash-badge:hover { background:rgba(34,197,94,0.16); border-color:var(--green); }
+  .cash-badge.zero  { border-color:var(--border); background:var(--bg); color:var(--muted); }
+
+  .device-item {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; padding:13px 14px; margin-bottom:9px;
+    display:flex; align-items:center; gap:12px;
+    transition:all 0.15s; position:relative;
+  }
+  .device-item:hover { border-color:#fbd38d; box-shadow:0 2px 12px rgba(249,115,22,0.07); }
+
+  .status-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .dot-on   { background:var(--green);  box-shadow:0 0 0 3px rgba(34,197,94,0.18); }
+  .dot-off  { background:var(--muted); }
+  .dot-warn { background:var(--yellow); box-shadow:0 0 0 3px rgba(245,158,11,0.18); }
+
+  .dev-info { flex:1; min-width:0; }
+  .dev-name { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dev-meta { font-size:12px; color:var(--muted); margin-top:2px; }
+
+  .dev-val {
+    font-family:'Syne',sans-serif; font-size:15px; font-weight:800;
+    color:var(--green); flex-shrink:0; text-align:right;
+  }
+  .dev-val small {
+    display:block; font-family:'DM Sans',sans-serif;
+    font-size:11px; font-weight:400; color:var(--muted);
+  }
+
+  /* 3 DOTS BUTTON */
+  .dots-btn {
+    width:34px; height:34px; border-radius:9px;
+    border:1.5px solid var(--border); background:none;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; flex-shrink:0; transition:all 0.15s;
+    font-size:16px; color:var(--muted); letter-spacing:1px;
+  }
+  .dots-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(249,115,22,0.05); }
+
+  /* DROPDOWN MENU */
+  .dropdown {
+    position:absolute; right:14px; top:52px;
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.12);
+    z-index:40; min-width:200px; overflow:hidden;
+    animation:popIn 0.15s ease both;
+  }
+  @keyframes popIn {
+    from { opacity:0; transform:scale(0.95) translateY(-4px); }
+    to   { opacity:1; transform:scale(1) translateY(0); }
+  }
+  .dd-item {
+    padding:12px 16px; display:flex; align-items:center; gap:10px;
+    font-size:14px; font-weight:500; cursor:pointer; transition:background 0.1s;
+    border-bottom:1px solid var(--border);
+  }
+  .dd-item:last-child { border-bottom:none; }
+  .dd-item:hover { background:var(--bg); }
+  .dd-item .dd-icon { font-size:17px; width:22px; text-align:center; }
+  .dd-item.highlight { color:var(--green); font-weight:600; }
+  .dd-item.danger    { color:var(--red); }
+
+  /* ── PAGAMENTOS ── */
+  .filter-box {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; padding:16px; margin-bottom:16px;
+  }
+  .filter-title {
+    font-size:13px; font-weight:700; color:var(--muted);
+    text-transform:uppercase; letter-spacing:0.6px; margin-bottom:12px;
+  }
+  .filter-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .filter-field label {
+    display:block; font-size:11px; font-weight:600; color:var(--muted);
+    text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px;
+  }
+  .filter-field input {
+    width:100%; padding:10px 12px;
+    border:1.5px solid var(--border); border-radius:10px;
+    font-family:'DM Sans',sans-serif; font-size:13px; color:var(--text);
+    background:#fafafa; outline:none; transition:all 0.2s;
+  }
+  .filter-field input:focus { border-color:var(--accent); background:#fff; }
+
+  .filter-actions { display:flex; gap:8px; margin-top:12px; }
+
+  .btn-filter {
+    flex:1; padding:11px;
+    background:linear-gradient(135deg,var(--accent),#ea580c);
+    border:none; border-radius:10px; color:white;
+    font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+    cursor:pointer; transition:all 0.15s;
+  }
+  .btn-filter:hover { box-shadow:0 4px 12px rgba(249,115,22,0.3); }
+
+  .btn-pdf {
+    padding:11px 16px;
+    background:#fff; border:1.5px solid var(--border);
+    border-radius:10px; color:var(--text);
+    font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+    cursor:pointer; transition:all 0.15s; display:flex; align-items:center; gap:6px;
+  }
+  .btn-pdf:hover { border-color:var(--red); color:var(--red); }
+
+  /* RESUMO PAGAMENTOS */
+  .pay-summary {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;
+  }
+  .ps-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:12px; padding:12px; text-align:center;
+  }
+  .ps-val { font-family:'Syne',sans-serif; font-size:17px; font-weight:800; line-height:1; margin-bottom:3px; }
+  .ps-lbl { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.4px; }
+
+  /* HISTÓRICO ITEM */
+  .pay-item {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:13px; padding:12px 14px; margin-bottom:8px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .pay-icon {
+    width:38px; height:38px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; flex-shrink:0;
+  }
+  .pay-info { flex:1; }
+  .pay-device { font-size:13px; font-weight:600; }
+  .pay-meta   { font-size:12px; color:var(--muted); margin-top:2px; }
+  .pay-val    { font-family:'Syne',sans-serif; font-size:15px; font-weight:800; flex-shrink:0; }
+
+  /* MODAL PULSO */
+  .overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.4);
+    backdrop-filter:blur(6px); z-index:100;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .overlay.open { display:flex; animation:fadeIn 0.2s ease; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+  .modal {
+    background:var(--card); border-radius:24px 24px 0 0;
+    padding:24px 22px 40px; width:100%; max-width:480px;
+    animation:slideUp 0.3s ease;
+  }
+  @keyframes slideUp {
+    from { transform:translateY(100%); }
+    to   { transform:translateY(0); }
+  }
+
+  .modal-handle {
+    width:36px; height:4px; background:var(--border);
+    border-radius:2px; margin:0 auto 20px;
+  }
+  .modal-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; margin-bottom:4px; }
+  .modal-sub   { font-size:13px; color:var(--muted); margin-bottom:22px; }
+
+  .pulse-big {
+    text-align:center; padding:22px;
+    background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:16px; margin-bottom:18px;
+  }
+  .pulse-num {
+    font-family:'Syne',sans-serif; font-size:64px; font-weight:800;
+    color:var(--green); line-height:1;
+  }
+  .pulse-desc { font-size:13px; color:var(--muted); margin-top:6px; }
+
+  .pulse-row { display:flex; gap:8px; margin-bottom:18px; }
+  .pctl {
+    flex:1; padding:13px; border-radius:12px; border:1.5px solid var(--border);
+    background:none; font-family:'DM Sans',sans-serif; font-size:18px; font-weight:700;
+    cursor:pointer; color:var(--text); transition:all 0.15s;
+  }
+  .pctl:hover { border-color:var(--accent); color:var(--accent); background:rgba(249,115,22,0.05); }
+
+  .modal-btns { display:flex; gap:10px; }
+  .btn-cancel {
+    flex:1; padding:14px; border-radius:12px; border:1.5px solid var(--border);
+    background:none; font-family:'DM Sans',sans-serif; font-size:14px;
+    font-weight:600; color:var(--muted); cursor:pointer;
+  }
+  .btn-send {
+    flex:2; padding:14px; border-radius:12px; border:none;
+    background:linear-gradient(135deg,var(--green),#16a34a); color:white;
+    font-family:'Syne',sans-serif; font-size:15px; font-weight:700;
+    cursor:pointer; box-shadow:0 4px 14px rgba(34,197,94,0.3); transition:all 0.15s;
+  }
+  .btn-send:hover { box-shadow:0 6px 20px rgba(34,197,94,0.4); }
+
+  /* TOAST */
+  .toast {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    padding:12px 22px; background:var(--text); color:white;
+    border-radius:30px; font-size:14px; font-weight:600;
+    white-space:nowrap; z-index:300; display:none;
+    animation:toastIn 0.3s ease;
+  }
+  @keyframes toastIn {
+    from { opacity:0; transform:translateX(-50%) translateY(10px); }
+    to   { opacity:1; transform:translateX(-50%) translateY(0); }
+  }
+  .toast.show { display:block; }
+
+  /* EMPTY */
+  .empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:14px; }
+  .empty .e-icon { font-size:36px; margin-bottom:10px; }
+
+  @media(max-width:480px) {
+    .content { padding:14px; }
+    .filter-grid { grid-template-columns:1fr; }
+    .summary, .pay-summary { gap:8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="screen active">
+  <div class="login-box" style="margin:auto">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-name">Tarifa<span>Pay</span></div>
+      <div class="brand-sub">Painel do Cliente</div>
+    </div>
+    <div class="field">
+      <label>E-mail ou Celular</label>
+      <input type="text" id="inp-user" placeholder="seu@email.com">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="inp-pass" placeholder="••••••••">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Entrar</button>
+    <div class="login-foot">
+      Suporte via WhatsApp<br>
+      TarifaPay © 2026 · <span id="clock"></span>
+    </div>
+  </div>
+</div>
+
+<!-- APARELHOS -->
+<div id="devices" class="screen">
+  <div class="topbar">
+    <div class="tb-row1">
+      <div class="tb-brand"><div class="tb-icon">⚡</div>Tarifa<span>Pay</span></div>
+      <div id="days-badge" title="Dias restantes da mensalidade" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:38px;height:36px;border-radius:10px;padding:0 8px;border:1.5px solid var(--border);background:#f4f6f9;cursor:default;flex-shrink:0;">
+        <span id="days-num" style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;line-height:1;color:#1a1a2e">21</span>
+        <span style="font-size:9px;font-weight:600;color:var(--muted);letter-spacing:0.3px;text-transform:uppercase">dias</span>
+      </div>
+      <div class="tb-user" onclick="doLogout()">
+        <div class="tb-avatar" id="user-initial">J</div>
+        <span id="user-name">João</span>
+      </div>
+    </div>
+    <div class="tb-row2">
+      <button class="sec-btn" onclick="goTo('payments')" style="white-space:nowrap">📋 Pagamentos</button>
+      <button class="sec-btn" onclick="goTo('mensalidade')" id="btn-mensalidade" style="color:var(--green);border-color:rgba(34,197,94,0.3);white-space:nowrap">💳 Mensalidade</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="summary">
+      <div class="sum-card">
+        <div class="sum-val" id="s-total" style="color:var(--accent)">0</div>
+        <div class="sum-lbl">Aparelhos</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-val" id="s-online" style="color:var(--green)">0</div>
+        <div class="sum-lbl">Online</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-val" id="s-hoje" style="color:var(--text)">R$0</div>
+        <div class="sum-lbl">Hoje</div>
+      </div>
+    </div>
+    <div class="sec-head">
+      <div class="sec-title">📡 Meus Aparelhos</div>
+    </div>
+    <div id="device-list"></div>
+  </div>
+</div>
+
+<!-- PAGAMENTOS -->
+<div id="payments" class="screen">
+  <div class="topbar">
+    <div class="tb-row1">
+      <div class="tb-brand"><div class="tb-icon">⚡</div>Tarifa<span>Pay</span></div>
+      <button class="tb-back" onclick="goTo('devices')">← Voltar</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="sec-head" style="margin-bottom:14px">
+      <div class="sec-title" id="pay-title">📋 Pagamentos</div>
+    </div>
+
+    <!-- CHIP APARELHO FILTRADO -->
+    <div id="device-chip" style="display:none;margin-bottom:12px">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:7px 14px;
+                  background:rgba(249,115,22,0.08);border:1.5px solid rgba(249,115,22,0.25);
+                  border-radius:20px;font-size:13px;font-weight:600;color:var(--accent)">
+        <span>📍</span>
+        <span id="device-chip-name"></span>
+        <button onclick="clearDeviceFilter()" style="background:none;border:none;cursor:pointer;
+                font-size:15px;color:var(--muted);padding:0;line-height:1;margin-left:4px">✕</button>
+      </div>
+    </div>
+
+    <!-- FILTRO -->
+    <div class="filter-box">
+      <div class="filter-title">🔎 Filtrar por período</div>
+      <div class="filter-grid">
+        <div class="filter-field">
+          <label>Data início</label>
+          <input type="datetime-local" id="f-start">
+        </div>
+        <div class="filter-field">
+          <label>Data fim</label>
+          <input type="datetime-local" id="f-end">
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button class="btn-filter" onclick="applyFilter()">Filtrar</button>
+        <button class="btn-pdf" onclick="darBaixaFiltrado()" style="border-color:rgba(34,197,94,0.4);color:var(--green)">✅ Dar Baixa</button>
+        <button class="btn-pdf" onclick="generatePDF()">📄 Gerar PDF</button>
+      </div>
+    </div>
+
+    <!-- RESUMO -->
+    <div class="pay-summary" style="grid-template-columns:repeat(5,1fr)">
+      <div class="ps-card">
+        <div class="ps-val" id="p-total" style="color:var(--green);font-size:15px">R$0</div>
+        <div class="ps-lbl">Total</div>
+      </div>
+      <div class="ps-card">
+        <div class="ps-val" id="p-count">0</div>
+        <div class="ps-lbl">Vendas</div>
+      </div>
+      <div class="ps-card">
+        <div class="ps-val" id="p-pix" style="color:#22c55e">0%</div>
+        <div class="ps-lbl">PIX</div>
+      </div>
+      <div class="ps-card">
+        <div class="ps-val" id="p-debito" style="color:#8b5cf6">0%</div>
+        <div class="ps-lbl">Débito</div>
+      </div>
+      <div class="ps-card">
+        <div class="ps-val" id="p-credito" style="color:#3b82f6">0%</div>
+        <div class="ps-lbl">Crédito</div>
+      </div>
+    </div>
+
+    <div id="payments-list"></div>
+  </div>
+</div>
+
+<!-- MODAL PULSO -->
+<div class="overlay" id="modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚡ Adicionar Crédito</div>
+    <div class="modal-sub" id="modal-sub">Aparelho selecionado</div>
+
+    <!-- TIPO DE LANÇAMENTO -->
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button id="tipo-normal-btn" onclick="setPulsoTipo('manual_normal')"
+        style="flex:1;padding:10px 8px;border-radius:11px;border:1.5px solid var(--accent);
+               background:rgba(249,115,22,0.08);color:var(--accent);font-family:'DM Sans',sans-serif;
+               font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;line-height:1.3">
+        ⚡ Pagamento Manual<br>
+        <span style="font-size:10px;font-weight:400;opacity:0.8">Soma ao montante</span>
+      </button>
+      <button id="tipo-baixado-btn" onclick="setPulsoTipo('manual_baixado')"
+        style="flex:1;padding:10px 8px;border-radius:11px;border:1.5px solid var(--border);
+               background:none;color:var(--muted);font-family:'DM Sans',sans-serif;
+               font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;line-height:1.3">
+        💵 Dinheiro Manual<br>
+        <span style="font-size:10px;font-weight:400;opacity:0.8">Não soma (baixado)</span>
+      </button>
+    </div>
+
+    <div class="pulse-big" id="pulse-big-box">
+      <div class="pulse-num" id="p-num">5</div>
+      <div class="pulse-desc">pulsos a enviar</div>
+    </div>
+    <div class="pulse-row">
+      <button class="pctl" onclick="chg(-5)">−5</button>
+      <button class="pctl" onclick="chg(-1)">−1</button>
+      <button class="pctl" onclick="chg(+1)">+1</button>
+      <button class="pctl" onclick="chg(+5)">+5</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-send" id="btn-send-pulse" onclick="sendPulse()">⚡ Enviar Crédito</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── API ──
+const API_URL = 'https://divertipay-server-production.up.railway.app';
+
+async function api(method, path, body = null) {
+  const token = localStorage.getItem('dp_token');
+  const res = await fetch(API_URL + path, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+    },
+    body: body ? JSON.stringify(body) : null
+  });
+  return res.json();
+}
+
+// ── DADOS (carregados da API) ──
+let devices      = [];
+let allPayments  = [];
+let pulseCount   = 0;
+let pulseTarget  = '';
+let openDropdown = null;
+let filteredPayments = [];
+
+// ── CLOCK ──
+function tick() {
+  const n = new Date(), p = v => String(v).padStart(2,'0');
+  const el = document.getElementById('clock');
+  if (el) el.textContent = `${p(n.getHours())}:${p(n.getMinutes())}`;
+}
+tick(); setInterval(tick, 10000);
+
+// ── LOGIN ──
+async function doLogin() {
+  const email = document.getElementById('inp-user').value.trim();
+  const senha = document.getElementById('inp-pass').value.trim();
+  if (!email || !senha) { showToast('Preencha email e senha'); return; }
+  showToast('Entrando...');
+  try {
+    const data = await api('POST', '/auth/login', { email, senha });
+    if (!data.token) { showToast(data.erro || 'Email ou senha incorretos'); return; }
+    localStorage.setItem('dp_token', data.token);
+    localStorage.setItem('dp_nome', data.nome);
+    localStorage.setItem('dp_expira', data.plano_expira);
+    const nomeFormatado = data.nome.split(' ')[0];
+    document.getElementById('user-name').textContent    = nomeFormatado;
+    document.getElementById('user-initial').textContent = nomeFormatado[0].toUpperCase();
+    // Calcular dias restantes
+    const expira = new Date(data.plano_expira);
+    const hoje   = new Date();
+    const dias   = Math.max(0, Math.ceil((expira - hoje) / (1000*60*60*24)));
+    setDaysBadge(dias);
+    goTo('devices');
+    setDefaultDates();
+    await carregarDados();
+  } catch(e) {
+    showToast('Erro de conexão. Tente novamente.');
+  }
+}
+
+async function carregarDados() {
+  showToast('Carregando...');
+  // Carregar aparelhos
+  const devData = await api('GET', '/devices');
+  devices = (devData || []).map(d => ({
+    id:     d.token || String(d.id),
+    name:   d.nome,
+    status: d.online ? 'online' : 'offline',
+    today:  0,
+    sales:  0,
+    cash:   parseFloat(d.noteiro_total) || 0
+  }));
+  // Carregar pagamentos
+  const from = document.getElementById('date-from')?.value || '2000-01-01';
+  const to   = document.getElementById('date-to')?.value   || '2099-12-31';
+  const payData = await api('GET', `/payments?from=${from}&to=${to}`);
+  allPayments = (payData || []).map(p => ({
+    id:        p.id,
+    device:    p.aparelho_nome,
+    val:       parseFloat(p.valor),
+    method:    p.tipo === 'pix' ? 'PIX' : p.tipo === 'cartao' ? 'Cartão' : 'Noteiro',
+    date:      p.criado_em?.replace('T',' ').substring(0,16) || '',
+    ok:        p.status === 'confirmado',
+    tipo:      'normal',
+    recolhido: !!p.recolhido
+  }));
+  filteredPayments = [...allPayments];
+  renderDevices();
+  renderPayments(allPayments);
+}
+
+function doLogout() {
+  localStorage.removeItem('dp_token');
+  localStorage.removeItem('dp_nome');
+  localStorage.removeItem('dp_expira');
+  goTo('login');
+}
+
+// ── DIAS RESTANTES ──
+function setDaysBadge(days) {
+  const num = document.getElementById('days-num');
+  const badge = document.getElementById('days-badge');
+  if (!num || !badge) return;
+  const d = Math.max(0, Math.min(99, days));
+  num.textContent = String(d).padStart(2, '0');
+  if (d <= 5) {
+    badge.style.borderColor = 'var(--red)';
+    badge.style.background  = 'rgba(239,68,68,0.08)';
+    num.style.color = 'var(--red)';
+  } else if (d <= 10) {
+    badge.style.borderColor = 'var(--yellow)';
+    badge.style.background  = 'rgba(245,158,11,0.08)';
+    num.style.color = 'var(--yellow)';
+  } else {
+    badge.style.borderColor = 'var(--border)';
+    badge.style.background  = 'var(--bg)';
+    num.style.color = 'var(--text)';
+  }
+}
+
+// ── NAV ──
+function goTo(s) {
+  document.querySelectorAll('.screen').forEach(x => x.classList.remove('active'));
+  document.getElementById(s).classList.add('active');
+  closeAllDropdowns();
+  window.scrollTo(0,0);
+  if (s === 'mensalidade') openMensalidade();
+  if (s !== 'mensalidade') clearInterval(payCheckInterval);
+  if (s === 'payments' && currentDeviceFilter === null) {
+    filteredPayments = [...allPayments];
+    renderPayments(filteredPayments);
+  }
+  if (s === 'devices') currentDeviceFilter = null;
+}
+
+// ── RENDER DEVICES ──
+function renderDevices() {
+  const online   = devices.filter(d => d.status === 'online').length;
+  const totalHoje = devices.reduce((a,d) => a + d.today, 0);
+  document.getElementById('s-total').textContent  = devices.length;
+  document.getElementById('s-online').textContent = online;
+  document.getElementById('s-hoje').textContent   = 'R$' + totalHoje.toLocaleString('pt-BR');
+
+  document.getElementById('device-list').innerHTML = devices.map((d,i) => {
+    const dotClass = d.status==='online' ? 'dot-on' : d.status==='alert' ? 'dot-warn' : 'dot-off';
+    const statusTxt = d.status==='online' ? 'Online' : d.status==='alert' ? 'Alerta' : 'Offline';
+    return `
+      <div class="device-item" id="dev-${i}">
+        <span class="status-dot ${dotClass}"></span>
+        <div class="dev-info">
+          <div class="dev-name">
+            <span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(249,115,22,0.1);padding:2px 7px;border-radius:6px;margin-right:7px;letter-spacing:0.3px">${d.id}</span>${d.name}
+          </div>
+          <div class="dev-meta">
+            ${statusTxt} &nbsp;·&nbsp;
+            <span style="font-size:11px;color:var(--muted)">MP:</span>
+            <span style="font-size:11px;font-weight:700;color:var(--text);letter-spacing:0.5px">${d.mpId}</span>
+          </div>
+          <div onclick="openCashMenu(event,${i})"
+               class="cash-badge ${(d.cash||0) === 0 ? 'zero' : ''}">
+            💵 ${(d.cash||0) > 0 ? 'R$'+(d.cash).toLocaleString('pt-BR') : 'R$0'}
+          </div>
+        </div>
+        <div class="dev-val">
+          ${d.today > 0 ? 'R$'+d.today.toLocaleString('pt-BR') : '—'}
+          <small>${d.sales > 0 ? d.sales+' vendas' : 'hoje'}</small>
+        </div>
+        <button class="dots-btn" onclick="toggleDropdown(event,${i},'${d.id}','${d.name}')">⋯</button>
+        <div class="dropdown" id="dd-${i}" style="display:none">
+          <div class="dd-item highlight" onclick="openModal('${d.id}','${d.name}');closeAllDropdowns()">
+            <span class="dd-icon">⚡</span> Adicionar Crédito
+          </div>
+          <div class="dd-item" onclick="goToPaymentsFiltered('${d.name}');closeAllDropdowns()">
+            <span class="dd-icon">📋</span> Ver Pagamentos
+          </div>
+          <div class="dd-item" onclick="openRename(${i},'${d.name}');closeAllDropdowns()">
+            <span class="dd-icon">✏️</span> Renomear Ponto
+          </div>
+          <div class="dd-item" onclick="showToast('Em breve: detalhes do aparelho');closeAllDropdowns()">
+            <span class="dd-icon">🔍</span> Detalhes
+          </div>
+          <div class="dd-item danger" onclick="showToast('Função disponível em breve');closeAllDropdowns()">
+            <span class="dd-icon">⚙️</span> Configurar
+          </div>
+          <div class="dd-item danger" onclick="confirmarApagar(${i},'${d.name}');closeAllDropdowns()">
+            <span class="dd-icon">🗑️</span> Apagar Tudo
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── DROPDOWN ──
+function toggleDropdown(e, idx, id, name) {
+  e.stopPropagation();
+  const dd = document.getElementById('dd-'+idx);
+  const isOpen = dd.style.display === 'block';
+  closeAllDropdowns();
+  if (!isOpen) { dd.style.display = 'block'; openDropdown = idx; }
+}
+
+function closeAllDropdowns() {
+  document.querySelectorAll('.dropdown').forEach(d => d.style.display = 'none');
+  openDropdown = null;
+}
+
+document.addEventListener('click', closeAllDropdowns);
+
+// ── PAGAMENTOS ──
+function setDefaultDates() {
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0,0,0,0);
+  const fmt = d => {
+    const p = v => String(v).padStart(2,'0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+  document.getElementById('f-start').value = fmt(start);
+  document.getElementById('f-end').value   = fmt(now);
+}
+
+let currentDeviceFilter = null; // null = todos os aparelhos
+
+async function applyFilter() {
+  const s = document.getElementById('f-start').value;
+  const e = document.getElementById('f-end').value;
+  if (s && e) {
+    const payData = await api('GET', `/payments?from=${s}&to=${e}`);
+    allPayments = (payData || []).map(p => ({
+      id:        p.id,
+      device:    p.aparelho_nome,
+      val:       parseFloat(p.valor),
+      method:    p.tipo === 'pix' ? 'PIX' : p.tipo === 'cartao' ? 'Cartão' : 'Noteiro',
+      date:      p.criado_em?.replace('T',' ').substring(0,16) || '',
+      ok:        p.status === 'confirmado',
+      tipo:      'normal',
+      recolhido: !!p.recolhido
+    }));
+  }
+  let base = currentDeviceFilter
+    ? allPayments.filter(p => p.device === currentDeviceFilter)
+    : allPayments;
+  filteredPayments = base;
+  renderPayments(base);
+  showDeviceChip(currentDeviceFilter || null);
+}
+
+function goToPaymentsFiltered(deviceName) {
+  currentDeviceFilter = deviceName;
+  goTo('payments');
+  setDefaultDates();
+  const filtered = allPayments.filter(p => p.device === deviceName);
+  filteredPayments = filtered;
+  renderPayments(filtered);
+  showDeviceChip(deviceName);
+}
+
+function showDeviceChip(name) {
+  const chip = document.getElementById('device-chip');
+  if (!chip) return;
+  if (name) {
+    document.getElementById('device-chip-name').textContent = name;
+    chip.style.display = 'block';
+  } else {
+    chip.style.display = 'none';
+  }
+}
+
+function clearDeviceFilter() {
+  currentDeviceFilter = null;
+  showDeviceChip(null);
+  filteredPayments = [...allPayments];
+  renderPayments(filteredPayments);
+}
+
+function calcTotals(list) {
+  // Normal + manual_normal confirmados e NÃO recolhidos = somam
+  const somam    = list.filter(p => p.ok && !p.recolhido && p.tipo !== 'manual_baixado');
+  const baixados = list.filter(p => p.ok && p.tipo === 'manual_baixado');
+  const recolhidos = list.filter(p => p.ok && p.recolhido);
+  const totalBruto = somam.reduce((a,p) => a+p.val, 0);
+  return { somam, baixados, recolhidos, totalBruto };
+}
+
+function toggleRecolhido(id) {
+  const p = allPayments.find(x => x.id === id);
+  if (p) p.recolhido = !p.recolhido;
+  // atualiza filteredPayments tb
+  const fp = filteredPayments.find(x => x.id === id);
+  if (fp) fp.recolhido = !fp.recolhido;
+  renderPayments(filteredPayments);
+}
+
+function renderPayments(list) {
+  const { somam, baixados, recolhidos, totalBruto } = calcTotals(list);
+
+  // só contar eletrônicos confirmados (PIX, Débito, Crédito) para as %
+  const eletronicos = list.filter(p => p.ok && ['PIX','Débito','Crédito'].includes(p.method) && !p.recolhido && p.tipo !== 'manual_baixado');
+  const nPix     = eletronicos.filter(p=>p.method==='PIX').length;
+  const nDebito  = eletronicos.filter(p=>p.method==='Débito').length;
+  const nCredito = eletronicos.filter(p=>p.method==='Crédito').length;
+  const totalElet = eletronicos.length || 1;
+
+  const pixPct    = eletronicos.length ? Math.round(nPix    / totalElet * 100) : 0;
+  const debitoPct = eletronicos.length ? Math.round(nDebito / totalElet * 100) : 0;
+  const creditoPct= eletronicos.length ? Math.round(nCredito/ totalElet * 100) : 0;
+
+  // contar só vendas reais (confirmadas, não baixadas, não recolhidas)
+  const vendas = list.filter(p => p.ok && p.tipo !== 'manual_baixado' && !p.recolhido).length;
+
+  document.getElementById('p-total').textContent   = 'R$' + totalBruto.toLocaleString('pt-BR');
+  document.getElementById('p-count').textContent   = vendas;
+  document.getElementById('p-pix').textContent     = nPix    > 0 ? pixPct    + '% (' + nPix    + ')' : '—';
+  document.getElementById('p-debito').textContent  = nDebito > 0 ? debitoPct + '% (' + nDebito + ')' : '—';
+  document.getElementById('p-credito').textContent = nCredito> 0 ? creditoPct+ '% (' + nCredito+ ')' : '—';
+
+  if (list.length === 0) {
+    document.getElementById('payments-list').innerHTML =
+      '<div class="empty"><div class="e-icon">📭</div>Nenhum pagamento no período</div>';
+    return;
+  }
+
+  const icons = { PIX:'🟢', Débito:'🟣', Crédito:'🔵', Manual:'⚡' };
+
+  document.getElementById('payments-list').innerHTML = list.map(p => {
+    const isBaixado   = p.tipo === 'manual_baixado';
+    const isRecolhido = p.recolhido;
+    const naoSoma     = isBaixado || isRecolhido || !p.ok;
+
+    // cores do ícone
+    let bgIcon = '#f0fdf4', bdIcon = '#bbf7d0';
+    if (!p.ok)       { bgIcon='#fef2f2'; bdIcon='#fecaca'; }
+    if (isBaixado)   { bgIcon='#fffbeb'; bdIcon='#fde68a'; }
+    if (isRecolhido) { bgIcon='#f8fafc'; bdIcon='#cbd5e1'; }
+
+    // tag de status
+    let tag = '';
+    if (!p.ok)            tag = '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#fef2f2;color:var(--red);font-weight:700;border:1px solid #fecaca">❌ Falhou</span>';
+    else if (isBaixado)   tag = '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#fffbeb;color:#b45309;font-weight:700;border:1px solid #fde68a">💵 Baixado</span>';
+    else if (isRecolhido) tag = '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#f1f5f9;color:var(--muted);font-weight:700;border:1px solid #cbd5e1">✓ Recolhido</span>';
+    else if (p.tipo === 'manual_normal') tag = '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(249,115,22,0.1);color:var(--accent);font-weight:700;border:1px solid rgba(249,115,22,0.25)">⚡ Manual</span>';
+    else                  tag = '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#f0fdf4;color:var(--green);font-weight:700;border:1px solid #bbf7d0">✅ Confirmado</span>';
+
+    const strikeStyle = naoSoma ? 'text-decoration:line-through;opacity:0.5;' : '';
+    const valColor    = naoSoma ? 'var(--muted)' : 'var(--green)';
+
+    // botão recolhido (só para pagamentos confirmados não baixados)
+    const btnRecolhido = (p.ok && !isBaixado)
+      ? `<button onclick="toggleRecolhido(${p.id})" title="${isRecolhido ? 'Desmarcar recolhido' : 'Marcar como recolhido'}"
+           style="width:30px;height:30px;border-radius:8px;border:1.5px solid ${isRecolhido ? '#cbd5e1' : 'var(--border)'};
+                  background:${isRecolhido ? '#f1f5f9' : 'none'};font-size:14px;cursor:pointer;
+                  display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='${isRecolhido ? '#cbd5e1' : 'var(--border)'}'">
+           ${isRecolhido ? '↩️' : '☑'}
+         </button>`
+      : '<div style="width:30px"></div>';
+
+    return `
+      <div class="pay-item" style="${isRecolhido ? 'opacity:0.7' : ''}">
+        <div class="pay-icon" style="background:${bgIcon};border:1px solid ${bdIcon}">
+          ${icons[p.method] || '💳'}
+        </div>
+        <div class="pay-info">
+          <div class="pay-device" style="${strikeStyle}">${p.device}</div>
+          <div class="pay-meta" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">
+            ${tag}
+            <span style="color:var(--muted)">${p.method} · ${p.date}</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <div class="pay-val" style="color:${valColor};${strikeStyle}">R$${p.val}</div>
+          ${btnRecolhido}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── GERAR PDF ──
+function generatePDF() {
+  if (!filteredPayments || filteredPayments.length === 0) {
+    showToast('Nenhum dado para exportar'); return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const W = 210, margin = 16;
+  let y = 20;
+
+  const { somam, baixados, recolhidos, totalBruto } = calcTotals(filteredPayments);
+  const totalBaixado   = baixados.reduce((a,p)=>a+p.val,0);
+  const totalRecolhido = recolhidos.reduce((a,p)=>a+p.val,0);
+
+  // ── CABEÇALHO ──
+  doc.setFillColor(249,115,22);
+  doc.roundedRect(margin, y-8, W-(margin*2), 18, 3, 3, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text('DivertiPay — Relatório de Pagamentos', W/2, y, {align:'center'});
+  y += 16;
+
+  const s = document.getElementById('f-start').value || '';
+  const e = document.getElementById('f-end').value   || '';
+  doc.setTextColor(100,100,100); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('Período: ' + (s?s.replace('T',' '):'Todos') + ' até ' + (e?e.replace('T',' '):'Todos'), margin, y);
+  doc.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), W-margin, y, {align:'right'});
+  y += 8;
+  doc.setDrawColor(230,230,230); doc.line(margin, y, W-margin, y);
+  y += 8;
+
+  // ── RESUMO ──
+  const cols = [
+    { label:'Entradas',       val:'R$'+totalBruto.toLocaleString('pt-BR'),    r:34,  g:197, b:94  },
+    { label:'Baixado (dinheiro)', val:'R$'+totalBaixado.toLocaleString('pt-BR'), r:180, g:140, b:0   },
+    { label:'Recolhido',      val:'R$'+totalRecolhido.toLocaleString('pt-BR'), r:100, g:116, b:139 },
+  ];
+  const bw = (W - margin*2 - 8) / 3;
+  cols.forEach((c, i) => {
+    const bx = margin + i*(bw+4);
+    doc.setFillColor(248,250,252); doc.setDrawColor(220,220,220);
+    doc.roundedRect(bx, y, bw, 16, 2, 2, 'FD');
+    doc.setTextColor(100,100,100); doc.setFontSize(7);
+    doc.text(c.label, bx+bw/2, y+5, {align:'center'});
+    doc.setTextColor(c.r,c.g,c.b); doc.setFontSize(12); doc.setFont('helvetica','bold');
+    doc.text(c.val, bx+bw/2, y+12, {align:'center'});
+  });
+  y += 22;
+
+  // Total final destacado
+  doc.setFillColor(34,197,94);
+  doc.roundedRect(margin, y, W-(margin*2), 12, 2, 2, 'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text('TOTAL FINAL (sem recolhidos/baixados):  R$' + totalBruto.toLocaleString('pt-BR'), W/2, y+8, {align:'center'});
+  y += 18;
+
+  // ── TABELA ──
+  doc.setFillColor(240,240,240); doc.setDrawColor(220,220,220);
+  doc.rect(margin, y, W-margin*2, 7, 'FD');
+  doc.setTextColor(60,60,60); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('Aparelho',  margin+2,  y+5);
+  doc.text('Método',    margin+55, y+5);
+  doc.text('Data/Hora', margin+80, y+5);
+  doc.text('Status',    margin+122, y+5);
+  doc.text('Valor',     W-margin-2, y+5, {align:'right'});
+  y += 9;
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+
+  filteredPayments.forEach((p, i) => {
+    if (y > 270) { doc.addPage(); y = 20; }
+
+    const isBaixado   = p.tipo === 'manual_baixado';
+    const isRecolhido = p.recolhido;
+    const naoSoma     = isBaixado || isRecolhido || !p.ok;
+
+    // Fundo zebra
+    if (i % 2 === 0) { doc.setFillColor(252,252,252); doc.rect(margin, y-4, W-margin*2, 7, 'F'); }
+
+    // Riscar linha se naoSoma
+    if (naoSoma) {
+      doc.setDrawColor(160,160,160);
+      doc.line(margin+2, y-1, W-margin-2, y-1);
+    }
+
+    // Cor do texto
+    if (!p.ok)            doc.setTextColor(200,50,50);
+    else if (isBaixado)   doc.setTextColor(160,120,0);
+    else if (isRecolhido) doc.setTextColor(130,140,150);
+    else                  doc.setTextColor(30,30,30);
+
+    doc.text(p.device.substring(0,18), margin+2,  y);
+    doc.text(p.method,                 margin+55, y);
+    doc.text(p.date,                   margin+80, y);
+
+    let statusTxt = 'Confirmado';
+    if (!p.ok)            statusTxt = 'Falhou';
+    else if (isBaixado)   statusTxt = 'Baixado';
+    else if (isRecolhido) statusTxt = 'Recolhido';
+    else if (p.tipo==='manual_normal') statusTxt = 'Manual';
+    doc.text(statusTxt, margin+122, y);
+
+    doc.setFont('helvetica','bold');
+    doc.text('R$'+p.val, W-margin-2, y, {align:'right'});
+    doc.setFont('helvetica','normal');
+    y += 7;
+  });
+
+  // Rodapé
+  doc.setDrawColor(230,230,230); doc.line(margin, y+2, W-margin, y+2);
+  y += 8;
+  doc.setTextColor(150,150,150); doc.setFontSize(8);
+  doc.text('DivertiPay — Relatório gerado automaticamente', W/2, y, {align:'center'});
+
+  doc.save('relatorio_divertipay.pdf');
+  showToast('✅ PDF gerado com sucesso!');
+}
+
+// ── MODAL PULSO ──
+let pulsoTipo = 'manual_normal';
+
+function openModal(id, name) {
+  pulseTarget = id;
+  pulseCount  = 5;
+  pulsoTipo   = 'manual_normal';
+  document.getElementById('p-num').textContent     = pulseCount;
+  document.getElementById('modal-sub').textContent = 'Aparelho: ' + name;
+  setPulsoTipo('manual_normal');
+  document.getElementById('modal').classList.add('open');
+}
+
+function setPulsoTipo(tipo) {
+  pulsoTipo = tipo;
+  const btnN = document.getElementById('tipo-normal-btn');
+  const btnB = document.getElementById('tipo-baixado-btn');
+  const box  = document.getElementById('pulse-big-box');
+  const btn  = document.getElementById('btn-send-pulse');
+
+  if (tipo === 'manual_normal') {
+    btnN.style.border     = '1.5px solid var(--accent)';
+    btnN.style.background = 'rgba(249,115,22,0.08)';
+    btnN.style.color      = 'var(--accent)';
+    btnB.style.border     = '1.5px solid var(--border)';
+    btnB.style.background = 'none';
+    btnB.style.color      = 'var(--muted)';
+    box.style.background  = '#f0fdf4';
+    box.style.borderColor = '#bbf7d0';
+    document.getElementById('p-num').style.color = 'var(--green)';
+    btn.textContent = '⚡ Enviar Crédito';
+    btn.style.background = 'linear-gradient(135deg,var(--green),#16a34a)';
+  } else {
+    btnB.style.border     = '1.5px solid #b45309';
+    btnB.style.background = 'rgba(180,83,9,0.08)';
+    btnB.style.color      = '#b45309';
+    btnN.style.border     = '1.5px solid var(--border)';
+    btnN.style.background = 'none';
+    btnN.style.color      = 'var(--muted)';
+    box.style.background  = '#fffbeb';
+    box.style.borderColor = '#fde68a';
+    document.getElementById('p-num').style.color = '#b45309';
+    btn.textContent = '💵 Registrar Dinheiro';
+    btn.style.background = 'linear-gradient(135deg,#f59e0b,#b45309)';
+  }
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+function chg(v) {
+  pulseCount = Math.max(1, Math.min(99, pulseCount + v));
+  document.getElementById('p-num').textContent = pulseCount;
+}
+
+function sendPulse() {
+  const idx   = devices.findIndex(d => d.id === pulseTarget);
+  const nome  = idx >= 0 ? devices[idx].name : pulseTarget;
+  const valor = pulseCount * 10; // cada pulso = R$10 (exemplo)
+  const now   = new Date();
+  const pad   = v => String(v).padStart(2,'0');
+  const dateStr = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
+
+  // Adiciona ao histórico
+  const newId = allPayments.length + 1;
+  const entry = {
+    id: newId, device: nome, val: valor, method: 'Manual',
+    date: dateStr, ok: true, tipo: pulsoTipo, recolhido: false
+  };
+  allPayments.unshift(entry);
+  filteredPayments.unshift(entry);
+
+  // Só soma ao total do dia se for manual_normal
+  if (idx >= 0 && pulsoTipo === 'manual_normal') {
+    devices[idx].today = (devices[idx].today || 0) + valor;
+    devices[idx].sales = (devices[idx].sales || 0) + 1;
+    renderDevices();
+  }
+
+  renderPayments(filteredPayments);
+  closeModal();
+
+  const label = pulsoTipo === 'manual_baixado' ? '💵 Dinheiro manual registrado!' : '⚡ Crédito enviado!';
+  showToast(label);
+}
+window.addEventListener('DOMContentLoaded', function() {
+  var m = document.getElementById('modal');
+  if (m) m.addEventListener('click', function(e) {
+    if (e.target === m) closeModal();
+  });
+
+  var ri = document.getElementById('rename-input');
+  if (ri) ri.addEventListener('input', function() {
+    document.getElementById('char-count').textContent = this.value.length;
+  });
+
+  var mr = document.getElementById('modal-rename');
+  if (mr) mr.addEventListener('click', function(e) {
+    if (e.target === mr) closeRename();
+  });
+
+  var ma = document.getElementById('modal-apagar');
+  if (ma) ma.addEventListener('click', function(e) {
+    if (e.target === ma) closeApagar();
+  });
+
+  var mb = document.getElementById('modal-baixa');
+  if (mb) mb.addEventListener('click', function(e) {
+    if (e.target === mb) closeBaixa();
+  });
+
+  var cm = document.getElementById('cash-menu');
+  if (cm) cm.addEventListener('click', function(e) {
+    if (e.target === cm) closeCashMenu();
+  });
+});
+
+// ── MENSALIDADE ──
+const mensalidadeConfig = {
+  valor: 120,       // definido pelo master
+  chavePix: '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef1234567890520400005303986540512\n0.005802BR5915DivertiPay6009SAO PAULO62140510divertipay6304ABCD'
+};
+
+function openMensalidade() {
+  // Atualiza info do plano
+  const days = parseInt(document.getElementById('days-num').textContent) || 21;
+  document.getElementById('m-days-left').textContent = days + ' dias';
+  document.getElementById('m-price').textContent     = 'R$' + mensalidadeConfig.valor;
+
+  // Gera QR Code simples no canvas
+  drawQR();
+
+  // Simula verificação de pagamento
+  startPaymentCheck();
+}
+
+function drawQR() {
+  const canvas = document.getElementById('qr-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const size = 180;
+  const mod  = 20; // modules
+  const cell = size / mod;
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, size, size);
+
+  // Gera padrão pseudo-aleatório baseado no valor (visual apenas)
+  const seed = mensalidadeConfig.valor * 7;
+  ctx.fillStyle = '#000000';
+
+  for (let r = 0; r < mod; r++) {
+    for (let c = 0; c < mod; c++) {
+      // Cantos fixos (finder patterns)
+      const inTL = r < 7 && c < 7;
+      const inTR = r < 7 && c >= mod-7;
+      const inBL = r >= mod-7 && c < 7;
+
+      if (inTL || inTR || inBL) {
+        const lr = inTL ? r : inTR ? r : r-(mod-7);
+        const lc = inTL ? c : inTR ? c-(mod-7) : c;
+        if (lr===0||lr===6||lc===0||lc===6) { ctx.fillRect(c*cell,r*cell,cell,cell); }
+        else if (lr>=2&&lr<=4&&lc>=2&&lc<=4) { ctx.fillRect(c*cell,r*cell,cell,cell); }
+        continue;
+      }
+
+      // Dados pseudo-aleatórios
+      const hash = ((r*mod+c)*seed + r*13 + c*7) % 3;
+      if (hash === 0) ctx.fillRect(c*cell, r*cell, cell, cell);
+    }
+  }
+
+  // Borda branca interna dos finder patterns
+  ctx.fillStyle = '#ffffff';
+  [[1,1],[1,mod-6],[mod-6,1]].forEach(([rr,cc]) => {
+    ctx.fillRect(cc*cell, rr*cell, 5*cell, 5*cell);
+  });
+  ctx.fillStyle = '#000000';
+  [[2,2],[2,mod-5],[mod-5,2]].forEach(([rr,cc]) => {
+    ctx.fillRect(cc*cell, rr*cell, 3*cell, 3*cell);
+  });
+
+  // Logo central
+  ctx.fillStyle = 'var(--accent)';
+  const logoSize = cell * 3;
+  const logoX = (size - logoSize) / 2;
+  const logoY = (size - logoSize) / 2;
+  ctx.fillStyle = '#f97316';
+  roundRect(ctx, logoX, logoY, logoSize, logoSize, 4);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold ' + (logoSize*0.7) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('⚡', size/2, size/2);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+let payCheckInterval = null;
+
+function startPaymentCheck() {
+  clearInterval(payCheckInterval);
+  let secs = 0;
+  const statusEl = document.getElementById('m-status-txt');
+  payCheckInterval = setInterval(() => {
+    secs += 5;
+    if (secs >= 30) { // Simula pagamento confirmado após 30s (demo)
+      clearInterval(payCheckInterval);
+      statusEl.textContent = '✅ Pagamento confirmado!';
+      statusEl.parentElement.style.background   = 'rgba(34,197,94,0.12)';
+      statusEl.parentElement.style.borderColor  = 'rgba(34,197,94,0.4)';
+      // Adiciona 30 dias ao badge
+      const numEl = document.getElementById('days-num');
+      if (numEl) {
+        const atual = parseInt(numEl.textContent) || 0;
+        const novo  = atual + 30;
+        numEl.textContent = String(novo).padStart(2,'0');
+        setDaysBadge(novo);
+      }
+      showToast('🎉 30 dias adicionados ao seu plano!');
+      setTimeout(() => goTo('devices'), 2500);
+    }
+  }, 5000);
+}
+
+function copiarChave() {
+  const chave = mensalidadeConfig.chavePix.replace(/\n/g, '');
+  navigator.clipboard.writeText(chave).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✅';
+    showToast('Chave Pix copiada!');
+    setTimeout(() => btn.textContent = '📋', 2000);
+  }).catch(() => {
+    showToast('Chave Pix copiada!');
+  });
+}
+
+// ── TAXAS ──
+const taxas = { PIX: 0, Débito: 1.5, Crédito: 3.0, Manual: 0 };
+
+function calcTaxa(p) {
+  if (!p.ok || p.tipo === 'manual_baixado' || p.recolhido) return 0;
+  return Math.round(p.val * (taxas[p.method] || 0)) / 100;
+}
+
+// ── DAR BAIXA NO APARELHO ──
+function darBaixaFiltrado() {
+  // usa o filteredPayments atual (resultado da busca por data)
+  const lista = filteredPayments.filter(p => p.ok && !p.recolhido && p.tipo !== 'manual_baixado');
+  if (lista.length === 0) { showToast('Nenhum item pendente no período'); return; }
+
+  // monta nome descritivo baseado nos aparelhos no filtro
+  const aparelhos = [...new Set(lista.map(p => p.device))];
+  const nomeDesc  = aparelhos.length === 1 ? aparelhos[0] : aparelhos.length + ' aparelhos';
+
+  document.getElementById('baixa-nome').textContent  = nomeDesc;
+  document.getElementById('baixa-count').textContent = lista.length + ' lançamentos';
+  const total = lista.reduce((a,p) => a + p.val, 0);
+  document.getElementById('baixa-total').textContent = 'R$' + total.toLocaleString('pt-BR');
+  document.getElementById('modal-baixa').dataset.nome = '__filtrado__';
+  document.getElementById('modal-baixa').classList.add('open');
+}
+
+function darBaixaAparelho(nome) {
+  // pega pagamentos do período filtrado para esse aparelho
+  const lista = filteredPayments.filter(p => p.device === nome && p.ok && !p.recolhido && p.tipo !== 'manual_baixado');
+  if (lista.length === 0) { showToast('Nenhum item pendente para ' + nome); return; }
+
+  document.getElementById('baixa-nome').textContent  = nome;
+  document.getElementById('baixa-count').textContent = lista.length + ' lançamentos';
+  const total = lista.reduce((a,p) => a + p.val, 0);
+  document.getElementById('baixa-total').textContent = 'R$' + total.toLocaleString('pt-BR');
+  document.getElementById('modal-baixa').dataset.nome = nome;
+  document.getElementById('modal-baixa').classList.add('open');
+}
+
+function closeBaixa() { document.getElementById('modal-baixa').classList.remove('open'); }
+
+function confirmarBaixa() {
+  const nome = document.getElementById('modal-baixa').dataset.nome;
+  let count = 0;
+
+  if (nome === '__filtrado__') {
+    // baixa todos os itens do filtro atual
+    const ids = new Set(filteredPayments.filter(p=>p.ok&&!p.recolhido&&p.tipo!=='manual_baixado').map(p=>p.id));
+    allPayments.forEach(p => { if (ids.has(p.id)) { p.recolhido = true; count++; } });
+    filteredPayments.forEach(p => { if (ids.has(p.id)) { p.recolhido = true; } });
+  } else {
+    allPayments.forEach(p => {
+      if (p.device === nome && p.ok && !p.recolhido && p.tipo !== 'manual_baixado') {
+        p.recolhido = true; count++;
+      }
+    });
+    filteredPayments.forEach(p => {
+      if (p.device === nome && p.ok && !p.recolhido && p.tipo !== 'manual_baixado') {
+        p.recolhido = true;
+      }
+    });
+  }
+
+  renderPayments(filteredPayments);
+  closeBaixa();
+  showToast('✅ Baixa realizada: ' + count + ' lançamentos');
+}
+
+// ── PDF POR APARELHO ──
+function gerarPDFAparelho(nome) {
+  const { jsPDF } = window.jspdf;
+
+  // pega período do filtro da tela
+  const fStart = document.getElementById('f-start').value;
+  const fEnd   = document.getElementById('f-end').value;
+
+  // filtra pagamentos do aparelho no período
+  let lista = allPayments.filter(p => p.device === nome);
+  if (fStart && fEnd) {
+    const s = new Date(fStart), e = new Date(fEnd);
+    lista = lista.filter(p => {
+      const d = new Date(p.date.replace(' ','T'));
+      return d >= s && d <= e;
+    });
+  }
+
+  if (lista.length === 0) { showToast('Nenhum movimento para ' + nome + ' no período'); return; }
+
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const W = 210, M = 16;
+  let y = 14;
+
+  // ── CABEÇALHO ──
+  doc.setFillColor(249,115,22);
+  doc.roundedRect(M, y, W-M*2, 20, 3, 3, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text('DivertiPay — Extrato do Ponto', W/2, y+8, {align:'center'});
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text(nome, W/2, y+15, {align:'center'});
+  y += 26;
+
+  // Período
+  const per = (fStart ? fStart.replace('T',' ') : 'Início') + ' até ' + (fEnd ? fEnd.replace('T',' ') : 'Agora');
+  doc.setTextColor(120,120,120); doc.setFontSize(8.5);
+  doc.text('Período: ' + per, M, y);
+  doc.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), W-M, y, {align:'right'});
+  y += 5;
+  doc.setDrawColor(220,220,220); doc.line(M, y, W-M, y);
+  y += 7;
+
+  // ── TABELA DE MOVIMENTOS ──
+  // cabeçalho
+  doc.setFillColor(245,245,245);
+  doc.rect(M, y, W-M*2, 7, 'F');
+  doc.setTextColor(80,80,80); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('Data/Hora',  M+2,   y+5);
+  doc.text('Método',     M+45,  y+5);
+  doc.text('Tipo',       M+75,  y+5);
+  doc.text('Bruto',      M+112, y+5, {align:'right'});
+  doc.text('Taxa',       M+133, y+5, {align:'right'});
+  doc.text('Líquido',    W-M-2, y+5, {align:'right'});
+  y += 9;
+
+  let totalBruto = 0, totalTaxa = 0, totalBaixado = 0, totalRecolhido = 0;
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  lista.forEach((p, i) => {
+    if (y > 265) { doc.addPage(); y = 20; }
+
+    const isBaixado   = p.tipo === 'manual_baixado';
+    const isRecolhido = p.recolhido;
+    const naoSoma     = isBaixado || isRecolhido || !p.ok;
+    const taxa        = naoSoma ? 0 : calcTaxa(p);
+    const liquido     = naoSoma ? 0 : p.val - taxa;
+
+    if (!naoSoma) { totalBruto += p.val; totalTaxa += taxa; }
+    if (isBaixado)   totalBaixado   += p.val;
+    if (isRecolhido) totalRecolhido += p.val;
+
+    // fundo zebra
+    if (i % 2 === 0) { doc.setFillColor(252,252,252); doc.rect(M, y-4, W-M*2, 7, 'F'); }
+
+    // cor da linha
+    if (!p.ok)            doc.setTextColor(200,60,60);
+    else if (isBaixado)   doc.setTextColor(160,120,0);
+    else if (isRecolhido) doc.setTextColor(140,150,160);
+    else                  doc.setTextColor(30,30,30);
+
+    doc.text(p.date,           M+2,   y);
+    doc.text(p.method,         M+45,  y);
+
+    let tipoTxt = 'Normal';
+    if (!p.ok)            tipoTxt = 'Falhou';
+    else if (isBaixado)   tipoTxt = 'Baixado';
+    else if (isRecolhido) tipoTxt = 'Recolhido';
+    else if (p.tipo === 'manual_normal') tipoTxt = 'Manual';
+    doc.text(tipoTxt, M+75, y);
+
+    doc.setFont('helvetica', naoSoma ? 'normal' : 'bold');
+    doc.text('R$'+p.val,                           M+112, y, {align:'right'});
+    doc.setFont('helvetica','normal');
+    doc.text(taxa > 0 ? '-R$'+taxa.toFixed(2) : '—', M+133, y, {align:'right'});
+    doc.setTextColor(naoSoma ? 140 : 34, naoSoma ? 150 : 139, naoSoma ? 160 : 34);
+    doc.setFont('helvetica','bold');
+    doc.text(naoSoma ? '—' : 'R$'+liquido.toFixed(2), W-M-2, y, {align:'right'});
+    doc.setFont('helvetica','normal');
+
+    // riscar linha se naoSoma
+    if (naoSoma) {
+      doc.setDrawColor(160,160,160);
+      doc.line(M+2, y-1.5, W-M-2, y-1.5);
+    }
+    y += 7;
+  });
+
+  // ── TOTAIS ──
+  y += 2;
+  doc.setDrawColor(220,220,220); doc.line(M, y, W-M, y);
+  y += 6;
+
+  const totalLiquido = totalBruto - totalTaxa;
+
+  const resumo = [
+    { label:'Total Bruto',          val:'R$'+totalBruto.toLocaleString('pt-BR'),    cor:[30,30,30] },
+  ];
+
+  // Detalhamento de taxas por método
+  const metodosUsados = [...new Set(lista.filter(p=>p.ok&&!p.recolhido&&p.tipo!=='manual_baixado').map(p=>p.method))];
+  metodosUsados.forEach(m => {
+    if ((taxas[m]||0) > 0) {
+      const t = lista.filter(p=>p.method===m&&p.ok&&!p.recolhido&&p.tipo!=='manual_baixado').reduce((a,p)=>a+calcTaxa(p),0);
+      resumo.push({ label:'  Taxa ' + m + ' (' + taxas[m] + '%)', val:'-R$'+t.toFixed(2), cor:[180,80,0] });
+    }
+  });
+
+  if (totalBaixado > 0)   resumo.push({ label:'Dinheiro Manual (baixado)', val:'R$'+totalBaixado.toLocaleString('pt-BR'), cor:[160,120,0] });
+  if (totalRecolhido > 0) resumo.push({ label:'Recolhidos (comissão)',     val:'R$'+totalRecolhido.toLocaleString('pt-BR'), cor:[120,130,140] });
+
+  resumo.forEach(r => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    doc.setTextColor(...r.cor); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(r.label, M+2, y);
+    doc.text(r.val, W-M-2, y, {align:'right'});
+    y += 6;
+  });
+
+  // Total líquido destacado
+  y += 2;
+  doc.setFillColor(34,197,94);
+  doc.roundedRect(M, y, W-M*2, 12, 2, 2, 'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('TOTAL LÍQUIDO', M+4, y+8);
+  doc.text('R$'+totalLiquido.toFixed(2), W-M-4, y+8, {align:'right'});
+  y += 18;
+
+  doc.setTextColor(160,160,160); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+  doc.text('DivertiPay — Documento gerado automaticamente', W/2, y, {align:'center'});
+
+  const nomeArq = 'extrato_' + nome.replace(/\s+/g,'_').toLowerCase() + '.pdf';
+  doc.save(nomeArq);
+  showToast('📄 PDF gerado: ' + nome);
+}
+
+// ── CONTADOR DE NOTAS (NOTEIRO) ──
+function openCashMenu(event, idx) {
+  event.stopPropagation();
+  closeAllDropdowns();
+  const d    = devices[idx];
+  const menu = document.getElementById('cash-menu');
+  menu.dataset.idx = idx;
+  document.getElementById('cm-name').textContent  = d.name;
+  document.getElementById('cm-value').textContent = d.cash > 0 ? 'R$' + d.cash.toLocaleString('pt-BR') : 'R$0';
+  menu.classList.add('open');
+}
+
+function closeCashMenu() {
+  document.getElementById('cash-menu').classList.remove('open');
+}
+
+function zeroCash() {
+  const idx = parseInt(document.getElementById('cash-menu').dataset.idx);
+  devices[idx].cash = 0;
+  renderDevices();
+  closeCashMenu();
+  showToast('💵 Contador zerado: ' + devices[idx].name);
+}
+
+// ── APAGAR HISTÓRICO ──
+function confirmarApagar(idx, nome) {
+  document.getElementById('apagar-nome').textContent = nome;
+  document.getElementById('apagar-idx').value = idx;
+  document.getElementById('modal-apagar').classList.add('open');
+}
+
+function closeApagar() {
+  document.getElementById('modal-apagar').classList.remove('open');
+}
+
+function executarApagar() {
+  const idx  = parseInt(document.getElementById('apagar-idx').value);
+  const nome = devices[idx].name;
+
+  // Remove todos os pagamentos desse aparelho
+  const antes = allPayments.length;
+  for (let i = allPayments.length - 1; i >= 0; i--) {
+    if (allPayments[i].device === nome) allPayments.splice(i, 1);
+  }
+  for (let i = filteredPayments.length - 1; i >= 0; i--) {
+    if (filteredPayments[i].device === nome) filteredPayments.splice(i, 1);
+  }
+
+  // Zera o total do aparelho visualmente
+  devices[idx].today = 0;
+  devices[idx].sales = 0;
+
+  renderDevices();
+  renderPayments(filteredPayments);
+  closeApagar();
+  showToast('🗑️ Histórico de ' + nome + ' apagado!');
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── RENOMEAR ──
+let renameIndex = -1;
+
+function openRename(idx, currentName) {
+  renameIndex = idx;
+  document.getElementById('rename-sub').textContent = 'Nome atual: ' + currentName;
+  const inp = document.getElementById('rename-input');
+  inp.value = currentName;
+  document.getElementById('char-count').textContent = currentName.length;
+  document.getElementById('modal-rename').classList.add('open');
+  setTimeout(() => { inp.focus(); inp.select(); }, 300);
+}
+
+function closeRename() {
+  document.getElementById('modal-rename').classList.remove('open');
+  renameIndex = -1;
+}
+
+function confirmRename() {
+  const val = document.getElementById('rename-input').value.trim();
+  if (!val) { showToast('Digite um nome para o ponto'); return; }
+  if (renameIndex < 0) return;
+  const old = devices[renameIndex].name;
+  devices[renameIndex].name = val;
+  allPayments.forEach(p => { if (p.device === old) p.device = val; });
+  filteredPayments.forEach(p => { if (p.device === old) p.device = val; });
+  renderDevices();
+  closeRename();
+  showToast('Nome atualizado: ' + val);
+}
+
+
+</script>
+
+<!-- MODAL RENOMEAR -->
+<div class="overlay" id="modal-rename">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">✏️ Renomear Ponto</div>
+    <div class="modal-sub" id="rename-sub">Nome atual</div>
+    <div class="field" style="margin-bottom:20px">
+      <label>Novo nome do ponto</label>
+      <input type="text" id="rename-input" placeholder="Ex: Bar do João" maxlength="40"
+        style="padding:14px 15px;border:1.5px solid var(--border);border-radius:12px;
+               font-size:16px;width:100%;outline:none;font-family:'DM Sans',sans-serif;transition:all 0.2s"
+        onfocus="this.style.borderColor='var(--accent)'"
+        onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter') confirmRename()">
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:right">
+        <span id="char-count">0</span>/40 caracteres
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeRename()">Cancelar</button>
+      <button class="btn-send"
+        style="background:linear-gradient(135deg,var(--accent),#ea580c);box-shadow:0 4px 14px rgba(249,115,22,0.3)"
+        onclick="confirmRename()">✅ Salvar Nome</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MENSALIDADE -->
+<div id="mensalidade" class="screen">
+  <div class="topbar">
+    <div class="tb-row1">
+      <div class="tb-brand"><div class="tb-icon">⚡</div>Tarifa<span>Pay</span></div>
+      <button class="tb-back" onclick="goTo('devices')">← Voltar</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <div class="sec-head" style="margin-bottom:16px">
+      <div class="sec-title">💳 Pagar Mensalidade</div>
+    </div>
+
+    <!-- STATUS PLANO -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px">
+      <div style="width:48px;height:48px;border-radius:14px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">📋</div>
+      <div style="flex:1">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:2px">Plano atual</div>
+        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800" id="m-plan-name">Plano Mensal</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Vence em <span id="m-days-left" style="font-weight:700;color:var(--accent)">21 dias</span></div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--green)" id="m-price">R$120</div>
+        <div style="font-size:11px;color:var(--muted)">por 30 dias</div>
+      </div>
+    </div>
+
+    <!-- QR CODE -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px 20px;margin-bottom:16px;text-align:center">
+      <div style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:16px">QR Code Pix</div>
+
+      <!-- QR Code visual gerado por CSS/canvas -->
+      <div style="display:inline-block;padding:16px;background:white;border-radius:16px;border:2px solid var(--border);margin-bottom:16px;box-shadow:0 4px 16px rgba(0,0,0,0.06)">
+        <canvas id="qr-canvas" width="180" height="180"></canvas>
+      </div>
+
+      <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Aponte a câmera do celular para pagar</div>
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:20px">
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block"></span>
+        <span style="font-size:12px;font-weight:600;color:var(--green)" id="m-status-txt">Aguardando pagamento...</span>
+      </div>
+    </div>
+
+    <!-- CHAVE PIX COPIA E COLA -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">💬 Pix Copia e Cola</div>
+      <div style="display:flex;gap:8px;align-items:stretch">
+        <div id="pix-key-display" style="flex:1;padding:12px 14px;background:#fafafa;border:1.5px solid var(--border);border-radius:12px;font-size:11px;color:var(--muted);word-break:break-all;line-height:1.6;font-family:monospace">
+          00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef1234567890520400005303986540512
+0.005802BR5915DivertiPay6009SAO PAULO62140510divertipay6304ABCD
+        </div>
+        <button onclick="copiarChave()" style="padding:12px 16px;border-radius:12px;border:1.5px solid var(--border);background:none;cursor:pointer;font-size:20px;transition:all 0.15s;flex-shrink:0" id="copy-btn" title="Copiar chave">📋</button>
+      </div>
+    </div>
+
+    <!-- INSTRUÇÃO -->
+    <div style="background:rgba(249,115,22,0.05);border:1px solid rgba(249,115,22,0.15);border-radius:14px;padding:16px 18px">
+      <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px">ℹ️ Como funciona</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.7">
+        Após o pagamento confirmado, <strong>30 dias serão adicionados</strong> automaticamente ao seu plano. O QR Code é válido por <strong>30 minutos</strong>.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL APAGAR -->
+<div class="overlay" id="modal-apagar">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="color:var(--red)">🗑️ Apagar Tudo</div>
+    <div class="modal-sub">Todos os pagamentos de <strong id="apagar-nome"></strong> serão removidos permanentemente.</div>
+    <input type="hidden" id="apagar-idx" value="">
+
+    <div style="background:#fef2f2;border:1.5px solid #fecaca;border-radius:14px;padding:16px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start">
+      <span style="font-size:20px;flex-shrink:0">⚠️</span>
+      <div style="font-size:13px;color:#b91c1c;line-height:1.6">
+        Esta ação <strong>não pode ser desfeita</strong>. O histórico de pagamentos e os valores do dia serão zerados para este aparelho.
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeApagar()">Cancelar</button>
+      <button class="btn-send" style="background:linear-gradient(135deg,var(--red),#b91c1c);box-shadow:0 4px 14px rgba(239,68,68,0.3)" onclick="executarApagar()">🗑️ Apagar Tudo</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- CASH MENU -->
+<div class="overlay" id="cash-menu">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">💵 Noteiro — Dinheiro Físico</div>
+    <div class="modal-sub" id="cm-name">Aparelho</div>
+
+    <div style="background:rgba(34,197,94,0.07);border:1.5px solid rgba(34,197,94,0.25);
+                border-radius:16px;padding:24px;text-align:center;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;
+                  letter-spacing:0.6px;margin-bottom:8px">Total detectado pelo noteiro</div>
+      <div style="font-family:'Syne',sans-serif;font-size:42px;font-weight:800;
+                  color:#15803d;line-height:1" id="cm-value">R$0</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">
+        Contador independente — não entra nas vendas
+      </div>
+    </div>
+
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;
+                padding:12px 14px;margin-bottom:20px;font-size:12px;color:#92400e;line-height:1.6">
+      ℹ️ Este valor é contado pelo noteiro físico do ESP32. Zerar apenas após retirar o dinheiro do equipamento.
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeCashMenu()">Fechar</button>
+      <button class="btn-send"
+        style="background:linear-gradient(135deg,var(--red),#b91c1c);box-shadow:0 4px 14px rgba(239,68,68,0.3)"
+        onclick="zeroCash()">🔄 Zerar Contador</button>
+    </div>
+    <button onclick="showToast('Configurações do noteiro — em breve')"
+      style="width:100%;margin-top:10px;padding:12px;border-radius:12px;border:1.5px solid var(--border);
+             background:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;
+             color:var(--muted);cursor:pointer">⚙️ Configurar Noteiro</button>
+  </div>
+</div>
+
+<!-- MODAL DAR BAIXA -->
+<div class="overlay" id="modal-baixa">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="color:var(--green)">✅ Dar Baixa</div>
+    <div class="modal-sub" id="baixa-nome">Aparelho</div>
+
+    <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:14px;padding:18px;margin-bottom:20px;text-align:center">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Lançamentos pendentes</div>
+      <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--green)" id="baixa-count">0</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">Total: <strong id="baixa-total" style="color:var(--text)">R$0</strong></div>
+    </div>
+
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;margin-bottom:20px;font-size:13px;color:#92400e;line-height:1.6">
+      ⚠️ Todos os lançamentos pendentes deste aparelho serão marcados como <strong>recolhidos</strong> e não somarão ao montante.
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeBaixa()">Cancelar</button>
+      <button class="btn-send" style="background:linear-gradient(135deg,var(--green),#16a34a);box-shadow:0 4px 14px rgba(34,197,94,0.3)" onclick="confirmarBaixa()">✅ Confirmar Baixa</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
