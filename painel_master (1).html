@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TarifaPay — Master</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<title>DivertiPay — Master</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg:     #f4f6f9;
@@ -19,7 +19,7 @@
     --blue:   #3b82f6;
   }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
 
   .screen { display:none; min-height:100vh; flex-direction:column; }
   .screen.active { display:flex; }
@@ -42,7 +42,7 @@
     border-radius:16px; display:inline-flex; align-items:center; justify-content:center;
     font-size:26px; margin-bottom:12px; box-shadow:0 8px 20px rgba(249,115,22,0.3);
   }
-  .brand-name { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; }
+  .brand-name { font-family:'Inter',sans-serif; font-size:24px; font-weight:800; }
   .brand-name span { color:var(--accent); }
   .brand-badge {
     display:inline-block; margin-top:6px; padding:3px 12px;
@@ -54,7 +54,7 @@
   .field label { display:block; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:6px; }
   .field input {
     width:100%; padding:13px 15px; border:1.5px solid var(--border); border-radius:12px;
-    font-family:'DM Sans',sans-serif; font-size:15px; color:var(--text);
+    font-family:'Inter',sans-serif; font-size:15px; color:var(--text);
     background:#fafafa; outline:none; transition:all 0.2s;
   }
   .field input:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px rgba(249,115,22,0.1); }
@@ -62,7 +62,7 @@
     width:100%; padding:15px; margin-top:6px;
     background:linear-gradient(135deg,var(--accent),#ea580c);
     border:none; border-radius:12px; color:white;
-    font-family:'Syne',sans-serif; font-size:16px; font-weight:700;
+    font-family:'Inter',sans-serif; font-size:16px; font-weight:700;
     cursor:pointer; box-shadow:0 4px 16px rgba(249,115,22,0.3); transition:all 0.2s;
   }
   .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 22px rgba(249,115,22,0.4); }
@@ -80,7 +80,7 @@
     overflow-x:auto; scrollbar-width:none;
   }
   .tb-row2::-webkit-scrollbar { display:none; }
-  .tb-brand { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; flex:1; display:flex; align-items:center; gap:8px; }
+  .tb-brand { font-family:'Inter',sans-serif; font-size:18px; font-weight:800; flex:1; display:flex; align-items:center; gap:8px; }
   .tb-icon { width:30px; height:30px; background:linear-gradient(135deg,var(--accent),#ea580c); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
   .tb-brand span { color:var(--accent); }
   .tb-master-badge {
@@ -105,15 +105,15 @@
   /* SUMMARY CARDS */
   .summary { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px; }
   .sum-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px 12px; text-align:center; }
-  .sum-val { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; line-height:1; margin-bottom:4px; }
+  .sum-val { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; line-height:1; margin-bottom:4px; }
   .sum-lbl { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
 
   /* SECTION */
   .sec-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-  .sec-title { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; }
+  .sec-title { font-family:'Inter',sans-serif; font-size:15px; font-weight:700; }
   .sec-btn {
     padding:7px 14px; border:1.5px solid var(--border); border-radius:10px;
-    background:none; font-family:'DM Sans',sans-serif; font-size:13px;
+    background:none; font-family:'Inter',sans-serif; font-size:13px;
     font-weight:600; color:var(--accent); cursor:pointer; transition:all 0.15s;
   }
   .sec-btn:hover { background:rgba(249,115,22,0.06); border-color:var(--accent); }
@@ -134,7 +134,7 @@
     width:40px; height:40px; border-radius:12px; flex-shrink:0;
     background:linear-gradient(135deg,var(--accent),#c2410c);
     display:flex; align-items:center; justify-content:center;
-    font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:white;
+    font-family:'Inter',sans-serif; font-size:18px; font-weight:800; color:white;
   }
 
   .client-info { flex:1; min-width:0; }
@@ -146,7 +146,7 @@
   .client-revenue {
     text-align:right;
   }
-  .rev-val { font-family:'Syne',sans-serif; font-size:16px; font-weight:800; color:var(--green); }
+  .rev-val { font-family:'Inter',sans-serif; font-size:16px; font-weight:800; color:var(--green); }
   .rev-lbl { font-size:11px; color:var(--muted); }
 
   /* DIAS BADGE */
@@ -155,7 +155,7 @@
     min-width:40px; height:40px; border-radius:10px; padding:0 8px;
     border:1.5px solid var(--border); flex-shrink:0;
   }
-  .days-chip .dc-num { font-family:'Syne',sans-serif; font-size:16px; font-weight:800; line-height:1; }
+  .days-chip .dc-num { font-family:'Inter',sans-serif; font-size:16px; font-weight:800; line-height:1; }
   .days-chip .dc-lbl { font-size:9px; font-weight:600; color:var(--muted); letter-spacing:0.3px; text-transform:uppercase; }
 
   .chevron { font-size:14px; color:var(--muted); transition:transform 0.2s; flex-shrink:0; }
@@ -181,8 +181,8 @@
   .dev-n  { font-size:13px; font-weight:600; }
   .dev-id { font-size:11px; color:var(--muted); margin-top:1px; }
 
-  .dev-val-col { font-family:'Syne',sans-serif; font-size:13px; font-weight:800; color:var(--green); text-align:right; flex-shrink:0; }
-  .dev-val-col small { display:block; font-family:'DM Sans',sans-serif; font-size:10px; font-weight:400; color:var(--muted); }
+  .dev-val-col { font-family:'Inter',sans-serif; font-size:13px; font-weight:800; color:var(--green); text-align:right; flex-shrink:0; }
+  .dev-val-col small { display:block; font-family:'Inter',sans-serif; font-size:10px; font-weight:400; color:var(--muted); }
 
   /* ACESSO PAINEL BTN */
   .add-days-btn {
@@ -198,7 +198,7 @@
     padding:7px 14px; border-radius:10px;
     background:linear-gradient(135deg,var(--accent),#ea580c);
     border:none; color:white;
-    font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600;
+    font-family:'Inter',sans-serif; font-size:12px; font-weight:600;
     cursor:pointer; transition:all 0.15s; white-space:nowrap;
     box-shadow:0 2px 8px rgba(249,115,22,0.25);
   }
@@ -241,31 +241,31 @@
   }
   @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
   .modal-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 20px; }
-  .modal-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; margin-bottom:4px; }
+  .modal-title { font-family:'Inter',sans-serif; font-size:18px; font-weight:800; margin-bottom:4px; }
   .modal-sub   { font-size:13px; color:var(--muted); margin-bottom:22px; }
   .days-big {
     text-align:center; padding:22px;
     background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:16px; margin-bottom:18px;
   }
-  .days-big-num { font-family:'Syne',sans-serif; font-size:64px; font-weight:800; color:var(--green); line-height:1; }
+  .days-big-num { font-family:'Inter',sans-serif; font-size:64px; font-weight:800; color:var(--green); line-height:1; }
   .days-big-lbl { font-size:13px; color:var(--muted); margin-top:6px; }
   .days-row { display:flex; gap:8px; margin-bottom:18px; }
   .dctl {
     flex:1; padding:13px; border-radius:12px; border:1.5px solid var(--border);
-    background:none; font-family:'DM Sans',sans-serif; font-size:18px; font-weight:700;
+    background:none; font-family:'Inter',sans-serif; font-size:18px; font-weight:700;
     cursor:pointer; color:var(--text); transition:all 0.15s;
   }
   .dctl:hover { border-color:var(--green); color:var(--green); background:rgba(34,197,94,0.05); }
   .modal-btns { display:flex; gap:10px; }
   .btn-cancel-m {
     flex:1; padding:14px; border-radius:12px; border:1.5px solid var(--border);
-    background:none; font-family:'DM Sans',sans-serif; font-size:14px;
+    background:none; font-family:'Inter',sans-serif; font-size:14px;
     font-weight:600; color:var(--muted); cursor:pointer;
   }
   .btn-confirm-m {
     flex:2; padding:14px; border-radius:12px; border:none;
     background:linear-gradient(135deg,var(--green),#16a34a); color:white;
-    font-family:'Syne',sans-serif; font-size:15px; font-weight:700;
+    font-family:'Inter',sans-serif; font-size:15px; font-weight:700;
     cursor:pointer; box-shadow:0 4px 14px rgba(34,197,94,0.3); transition:all 0.15s;
   }
   .btn-confirm-m:hover { box-shadow:0 6px 20px rgba(34,197,94,0.4); }
@@ -273,7 +273,7 @@
   /* TABS */
   .tab-btn {
     padding:8px 14px; border-radius:10px; border:1.5px solid var(--border);
-    background:none; font-family:'DM Sans',sans-serif; font-size:13px;
+    background:none; font-family:'Inter',sans-serif; font-size:13px;
     font-weight:600; color:var(--muted); cursor:pointer; transition:all 0.15s;
   }
   .tab-btn:hover { border-color:var(--accent); color:var(--accent); }
@@ -294,7 +294,7 @@
   .fin-name { font-size:14px; font-weight:600; }
   .fin-meta { font-size:12px; color:var(--muted); margin-top:2px; }
   .fin-right { text-align:right; flex-shrink:0; }
-  .fin-val  { font-family:'Syne',sans-serif; font-size:16px; font-weight:800; color:var(--green); }
+  .fin-val  { font-family:'Inter',sans-serif; font-size:16px; font-weight:800; color:var(--green); }
   .fin-days { font-size:11px; color:var(--muted); margin-top:2px; }
 
   .toast {
@@ -319,13 +319,13 @@
 <div id="login" class="screen active">
   <div class="login-box" style="margin:auto">
     <div class="brand">
-      <div class="brand-icon">⚡</div>
-      <div class="brand-name">Tarifa<span>Pay</span></div>
+      <div class="brand-icon">🎮</div>
+      <div class="brand-name">Diverti<span>Pay</span></div>
       <div class="brand-badge">Master</div>
     </div>
     <div class="field">
       <label>E-mail</label>
-      <input type="text" id="inp-user" placeholder="master@tarifapay.com">
+      <input type="text" id="inp-user" placeholder="master@divertipay.com">
     </div>
     <div class="field">
       <label>Senha</label>
@@ -333,7 +333,7 @@
     </div>
     <button class="btn-primary" onclick="doLogin()">Entrar como Master</button>
     <div class="login-foot">
-      TarifaPay © 2026 · Acesso Restrito<br>
+      DivertiPay © 2026 · Acesso Restrito<br>
       <span id="clock"></span>
     </div>
   </div>
@@ -344,7 +344,7 @@
   <div class="topbar">
     <div class="tb-row1">
       <div class="tb-brand">
-        <div class="tb-icon">⚡</div>
+        <div class="tb-icon">🎮</div>
         DivertiPay<span> </span>
         <span class="tb-master-badge">MASTER</span>
       </div>
@@ -387,7 +387,7 @@
       <!-- CLIENTES -->
       <div class="sec-head">
         <div class="sec-title">👥 Clientes</div>
-        <button class="sec-btn" onclick="showToast('Em breve: adicionar cliente')">+ Novo Cliente</button>
+        <button class="sec-btn" onclick="openNovoCli()">+ Novo Cliente</button>
       </div>
       <div id="clients-list"></div>
 
@@ -412,16 +412,16 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
           <div>
             <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Data início</label>
-            <input type="date" id="fin-start" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:#fafafa;outline:none">
+            <input type="date" id="fin-start" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text);background:#fafafa;outline:none">
           </div>
           <div>
             <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Data fim</label>
-            <input type="date" id="fin-end" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:#fafafa;outline:none">
+            <input type="date" id="fin-end" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text);background:#fafafa;outline:none">
           </div>
         </div>
         <div style="display:flex;gap:8px">
-          <button onclick="filterFinanceiro()" style="flex:1;padding:10px;background:linear-gradient(135deg,var(--accent),#ea580c);border:none;border-radius:10px;color:white;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Filtrar</button>
-          <button onclick="filterFinanceiro(true)" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer">Limpar</button>
+          <button onclick="filterFinanceiro()" style="flex:1;padding:10px;background:linear-gradient(135deg,var(--accent),#ea580c);border:none;border-radius:10px;color:white;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Filtrar</button>
+          <button onclick="filterFinanceiro(true)" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:none;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer">Limpar</button>
         </div>
       </div>
 
@@ -461,6 +461,33 @@
   </div>
 </div>
 
+<!-- MODAL NOVO CLIENTE -->
+<div class="overlay" id="modal-novo-cli" onclick="if(event.target===this)closeNovoCli()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">👤 Novo Cliente</div>
+    <div class="modal-sub">Preencha os dados do novo cliente</div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;display:block;margin-bottom:4px">Nome completo</label>
+        <input id="inp-cli-nome" type="text" placeholder="Nome do cliente" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:14px;outline:none">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;display:block;margin-bottom:4px">Email</label>
+        <input id="inp-cli-email" type="email" placeholder="email@exemplo.com" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:14px;outline:none">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;display:block;margin-bottom:4px">Senha inicial</label>
+        <input id="inp-cli-senha" type="text" placeholder="Senha para o cliente" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:14px;outline:none">
+      </div>
+    </div>
+    <div class="modal-btns" style="margin-top:16px">
+      <button class="btn-cancel-m" onclick="closeNovoCli()">Cancelar</button>
+      <button class="btn-confirm-m" onclick="confirmarNovoCli()">✅ Cadastrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── API ──
 const API_URL = 'https://divertipay-server-production.up.railway.app';
@@ -468,19 +495,14 @@ const MASTER_EMAIL = 'master@divertipay.com';
 const MASTER_SENHA = 'master2024';
 
 async function api(method, path, body = null) {
-  const token = localStorage.getItem('dp_master_token');
   const res = await fetch(API_URL + path, {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : null
   });
   return res.json();
 }
 
-// ── DADOS (carregados da API) ──
 let clients = [];
 
 // ── CLOCK ──
@@ -496,50 +518,71 @@ async function doLogin() {
   const u = document.getElementById('inp-user').value.trim();
   const p = document.getElementById('inp-pass').value.trim();
   if (!u || !p) { showToast('Preencha email e senha'); return; }
-  // Login master fixo por enquanto
-  if (u !== MASTER_EMAIL || p !== MASTER_SENHA) {
-    showToast('Credenciais master incorretas'); return;
-  }
+  if (u !== MASTER_EMAIL || p !== MASTER_SENHA) { showToast('Credenciais incorretas'); return; }
   goTo('master');
   await carregarClientes();
 }
 
 async function carregarClientes() {
-  showToast('Carregando clientes...');
+  showToast('Carregando...');
   try {
     const data = await api('GET', '/master/clients');
-    if (!Array.isArray(data)) { clients = []; renderAll(); return; }
-    clients = data.map(c => {
+    clients = (Array.isArray(data) ? data : []).map(c => {
       const expira = c.plano_expira ? new Date(c.plano_expira) : new Date();
-      const hoje   = new Date();
-      const dias   = Math.max(0, Math.ceil((expira - hoje) / (1000*60*60*24)));
+      const dias   = Math.max(0, Math.ceil((expira - new Date()) / (1000*60*60*24)));
       return {
-        id:       String(c.id),
+        id:       c.id,
         name:     c.nome,
         email:    c.email,
         daysLeft: dias,
         plat:     'MP',
         devices:  (c.aparelhos || []).map(d => ({
-          id:     d.token || String(d.id),
+          id:     String(d.id),
           name:   d.nome,
-          mpId:   d.token?.substring(0,8) || '',
+          mpId:   d.token?.substring(0,8) || '—',
           status: d.online ? 'online' : 'offline',
-          today:  0,
-          sales:  0
+          today:  0, sales: 0
         }))
       };
     });
     renderAll();
   } catch(e) {
-    showToast('Erro ao carregar clientes');
-    clients = [];
-    renderAll();
+    showToast('Erro ao carregar'); clients = []; renderAll();
   }
 }
 
-function doLogout() {
-  localStorage.removeItem('dp_master_token');
-  goTo('login');
+function doLogout() { goTo('login'); }
+
+// ── ACESSAR PAINEL DO CLIENTE ──
+function acessarPainel(email) {
+  const url = window.location.href.replace('painel_master', 'painel_cliente')
+                                   .replace('painel_master%20(1)', 'painel_cliente%20(1)');
+  showToast('Abrindo painel...');
+  setTimeout(() => window.open(url + '?email=' + encodeURIComponent(email), '_blank'), 500);
+}
+
+// ── CADASTRAR NOVO CLIENTE ──
+function openNovoCli() {
+  document.getElementById('modal-novo-cli').classList.add('open');
+}
+function closeNovoCli() {
+  document.getElementById('modal-novo-cli').classList.remove('open');
+  ['inp-cli-nome','inp-cli-email','inp-cli-senha'].forEach(id => document.getElementById(id).value = '');
+}
+async function confirmarNovoCli() {
+  const nome  = document.getElementById('inp-cli-nome').value.trim();
+  const email = document.getElementById('inp-cli-email').value.trim();
+  const senha = document.getElementById('inp-cli-senha').value.trim();
+  if (!nome || !email || !senha) { showToast('Preencha todos os campos'); return; }
+  showToast('Cadastrando...');
+  const data = await api('POST', '/auth/cadastro', { nome, email, senha });
+  if (data.ok) {
+    closeNovoCli();
+    showToast('✅ Cliente cadastrado!');
+    await carregarClientes();
+  } else {
+    showToast(data.erro || 'Erro ao cadastrar');
+  }
 }
 
 function goTo(s) {
@@ -618,7 +661,7 @@ function renderClients() {
         <div class="client-devices" id="devs-${ci}">
           ${devRows}
           <div style="padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)">
-            <button class="btn-access" onclick="acessarPainel('${c.name}')">
+            <button class="btn-access" onclick="acessarPainel('${c.email}')">
               Acessar Painel →
             </button>
           </div>
@@ -646,7 +689,7 @@ function renderVencimentos() {
           <div class="venc-date">${c.devices.length} aparelhos · ${c.plat} · ${c.email}</div>
         </div>
         <span class="pill ${pillClass}">${pillTxt}</span>
-        <button class="btn-access" onclick="acessarPainel('${c.name}')">Painel →</button>
+        <button class="btn-access" onclick="acessarPainel('${c.email}')">Painel →</button>
       </div>`;
   }).join('');
 }
@@ -667,12 +710,6 @@ function toggleClient(ci) {
 }
 
 // ── ACESSAR PAINEL DO CLIENTE ──
-function acessarPainel(nome) {
-  showToast('Abrindo painel de ' + nome + '...');
-  // Aqui no futuro abre o painel_cliente.html em nova aba com token do cliente
-  setTimeout(() => { window.open('painel_cliente.html', '_blank'); }, 800);
-}
-
 // ── ADICIONAR DIAS ──
 let daysAddCount = 30;
 let daysTargetIdx = -1;
@@ -695,12 +732,20 @@ function chgDays(v) {
   document.getElementById('days-add-num').textContent = daysAddCount;
 }
 
-function confirmAddDays() {
+async function confirmAddDays() {
   if (daysTargetIdx < 0) return;
-  clients[daysTargetIdx].daysLeft += daysAddCount;
-  closeAddDays();
-  renderAll();
-  showToast('✅ ' + daysAddCount + ' dias adicionados!');
+  const clienteId = clients[daysTargetIdx].id;
+  showToast('Adicionando dias...');
+  const data = await api('POST', '/master/add-days', { cliente_id: clienteId, dias: daysAddCount });
+  if (data.ok) {
+    clients[daysTargetIdx].daysLeft += daysAddCount;
+    closeAddDays();
+    renderAll();
+    showToast('✅ ' + daysAddCount + ' dias adicionados!');
+  } else {
+    showToast(data.erro || 'Erro ao adicionar dias');
+  }
+}
 }
 
 document.getElementById('modal-days').addEventListener('click', function(e) {
