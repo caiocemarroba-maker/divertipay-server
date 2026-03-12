@@ -85,6 +85,16 @@ app.get('/db-columns', async (req, res) => {
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
+app.get('/debug/aparelhos', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT id, nome, online, updated_at, NOW() as agora, TIMESTAMPDIFF(SECOND, updated_at, NOW()) as seg_atras FROM aparelhos'
+    );
+    const [fila] = await db.query('SELECT * FROM fila_pulsos');
+    res.json({ aparelhos: rows, fila_pulsos: fila });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 // ── AUTH ─────────────────────────────────────────────────────
 
 app.post('/auth/login', async (req, res) => {
