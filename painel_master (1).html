@@ -1182,13 +1182,9 @@ function showToast(msg) {
   <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:400px;font-family:'Inter',sans-serif">
     <div style="font-size:18px;font-weight:800;margin-bottom:4px">🏪 Configurar MP</div>
     <div id="mp-store-sub" style="font-size:13px;color:var(--muted);margin-bottom:20px"></div>
-    <div style="margin-bottom:14px">
+    <div style="margin-bottom:20px">
       <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px">MP Store ID (loja no Mercado Pago)</label>
       <input id="inp-mp-store-id" type="text" placeholder="Ex: 127303313" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;box-sizing:border-box">
-    </div>
-    <div style="margin-bottom:20px">
-      <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px">Valor por pulso (R$)</label>
-      <input id="inp-mp-valor-pulso" type="number" step="0.01" min="0.01" placeholder="1.00" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;box-sizing:border-box">
     </div>
     <div style="display:flex;gap:10px">
       <button onclick="closeMpStore()" style="flex:1;padding:14px;border:1.5px solid var(--border);border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer">Cancelar</button>
@@ -1210,13 +1206,12 @@ function closeMpStore() {
 }
 async function saveMpStore() {
   const storeId   = document.getElementById('inp-mp-store-id').value.trim();
-  const valorPulso = parseFloat(document.getElementById('inp-mp-valor-pulso').value) || 1;
   if (!storeId) { alert('Informe o Store ID'); return; }
   try {
-    const r = await fetch(API + '/admin/aparelho/' + mpStoreDeviceId + '/mp-store', {
+    const r = await fetch(API_URL + '/admin/aparelho/' + mpStoreDeviceId + '/mp-store', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mp_store_id: storeId, valor_pulso: valorPulso })
+      body: JSON.stringify({ mp_store_id: storeId, valor_pulso: 1.00 })
     });
     const data = await r.json();
     if (data.ok) {
