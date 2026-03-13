@@ -1214,7 +1214,7 @@ async function saveMpStore() {
     const data = await r.json();
     if (data.ok) {
       closeMpStore();
-      loadClients();
+      renderAll();
       showToast('MP Store vinculado!');
     } else {
       alert('Erro ao salvar');
