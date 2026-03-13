@@ -158,7 +158,7 @@ app.get('/auth/me', auth, async (req, res) => {
 app.get('/devices', auth, async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT id, nome, token, mp_user_id, online, noteiro_total FROM aparelhos WHERE cliente_id = ?',
+      'SELECT id, nome, token, mp_user_id, mp_store_id, valor_pulso, online, noteiro_total FROM aparelhos WHERE cliente_id = ?',
       [req.user.id]
     );
     res.json(rows);
@@ -244,7 +244,7 @@ app.get('/master/clients', async (req, res) => {
     );
     for (const c of clientes) {
       const [aparelhos] = await db.query(
-        'SELECT id, nome, token, mp_user_id, online, noteiro_total FROM aparelhos WHERE cliente_id = ?',
+        'SELECT id, nome, token, mp_user_id, mp_store_id, valor_pulso, online, noteiro_total FROM aparelhos WHERE cliente_id = ?',
         [c.id]
       );
       c.aparelhos = aparelhos;
