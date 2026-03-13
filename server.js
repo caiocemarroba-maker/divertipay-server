@@ -421,9 +421,10 @@ app.post('/webhook/mercadopago', async (req, res) => {
     const xRequestId = req.headers['x-request-id'] || '';
     const dataId     = req.query['data.id'] || req.body?.data?.id || '';
 
-    // Valida assinatura
+    // Valida assinatura (apenas em pagamentos reais - live_mode true)
     const secret = process.env.MP_WEBHOOK_SECRET || '';
-    if (secret && xSignature) {
+    const isLive = req.body?.live_mode === true;
+    if (secret && xSignature && isLive) {
       const ts = xSignature.split(',').find(p => p.startsWith('ts='))?.split('=')[1] || '';
       const v1 = xSignature.split(',').find(p => p.startsWith('v1='))?.split('=')[1] || '';
       const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts}`;
