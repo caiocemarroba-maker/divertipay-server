@@ -665,12 +665,14 @@ async function carregarClientes() {
         bloquear_vencer:   !!c.bloquear_vencer,
         plat:              'MP',
         devices:           (c.aparelhos || []).map(d => ({
-          id:     String(d.id),
-          name:   d.nome,
-          mpId:   d.mp_user_id || '—',
-          token:  d.token || '',
-          status: d.online ? 'online' : 'offline',
-          today:  0, sales: 0
+          id:        String(d.id),
+          name:      d.nome,
+          mpId:      d.mp_user_id || '—',
+          mpStoreId: d.mp_store_id || '',
+          valorPulso: parseFloat(d.valor_pulso) || 1,
+          token:     d.token || '',
+          status:    d.online ? 'online' : 'offline',
+          today:     0, sales: 0
         }))
       };
     });
@@ -871,14 +873,22 @@ function renderClients() {
 
     const devRows = c.devices.map(d => {
       const dotClass = d.status==='online' ? 'dot-on' : d.status==='alert' ? 'dot-warn' : 'dot-off';
+      const storeTag = d.mpStoreId
+        ? `<span style="font-size:10px;background:#eff6ff;color:#1d4ed8;padding:1px 6px;border-radius:5px;margin-left:4px">Store: ${d.mpStoreId}</span>`
+        : `<span style="font-size:10px;background:#fef9c3;color:#854d0e;padding:1px 6px;border-radius:5px;margin-left:4px">⚠ sem store_id</span>`;
       return `
         <div class="dev-row">
           <span class="dev-dot ${dotClass}"></span>
           <div class="dev-name-col">
             <div class="dev-n">
-              <span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(249,115,22,0.1);padding:1px 6px;border-radius:5px;margin-right:6px">${d.id}</span>${d.name}
+              <span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(249,115,22,0.1);padding:1px 6px;border-radius:5px;margin-right:6px">${d.id}</span>${d.name}${storeTag}
             </div>
-            <div class="dev-id">MP: ${d.mpId}</div>
+            <div class="dev-id" style="display:flex;align-items:center;gap:8px">
+              <span>MP user: ${d.mpId}</span>
+              <span style="color:var(--muted)">·</span>
+              <span>Pulso: R$ ${d.valorPulso.toFixed(2)}</span>
+              <button onclick="openMpStore('${d.id}','${d.mpStoreId}',${d.valorPulso})" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;color:var(--text)">✏️ Editar MP</button>
+            </div>
           </div>
           <div class="dev-val-col">
             ${d.today > 0 ? 'R$'+d.today.toLocaleString('pt-BR') : '—'}
@@ -1167,5 +1177,56 @@ function showToast(msg) {
   </div>
 </div>
 
+
+<div id="modal-mp-store" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;box-sizing:border-box" onclick="if(event.target===this)closeMpStore()">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:400px;font-family:'Inter',sans-serif">
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px">🏪 Configurar MP</div>
+    <div id="mp-store-sub" style="font-size:13px;color:var(--muted);margin-bottom:20px"></div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px">MP Store ID (loja no Mercado Pago)</label>
+      <input id="inp-mp-store-id" type="text" placeholder="Ex: 127303313" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px">Valor por pulso (R$)</label>
+      <input id="inp-mp-valor-pulso" type="number" step="0.01" min="0.01" placeholder="1.00" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;box-sizing:border-box">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeMpStore()" style="flex:1;padding:14px;border:1.5px solid var(--border);border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer">Cancelar</button>
+      <button onclick="saveMpStore()" style="flex:1;padding:14px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Salvar</button>
+    </div>
+  </div>
+</div>
+<script>
+let mpStoreDeviceId = null;
+function openMpStore(deviceId, currentStoreId, currentValorPulso) {
+  mpStoreDeviceId = deviceId;
+  document.getElementById('mp-store-sub').textContent = 'Aparelho #' + deviceId;
+  document.getElementById('inp-mp-store-id').value = currentStoreId || '';
+  document.getElementById('inp-mp-valor-pulso').value = currentValorPulso || 1;
+  document.getElementById('modal-mp-store').style.display = 'flex';
+}
+function closeMpStore() {
+  document.getElementById('modal-mp-store').style.display = 'none';
+}
+async function saveMpStore() {
+  const storeId   = document.getElementById('inp-mp-store-id').value.trim();
+  const valorPulso = parseFloat(document.getElementById('inp-mp-valor-pulso').value) || 1;
+  if (!storeId) { alert('Informe o Store ID'); return; }
+  try {
+    const r = await fetch(API + '/admin/aparelho/' + mpStoreDeviceId + '/mp-store', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mp_store_id: storeId, valor_pulso: valorPulso })
+    });
+    const data = await r.json();
+    if (data.ok) {
+      closeMpStore();
+      loadClients();
+      showToast('MP Store vinculado!');
+    } else {
+      alert('Erro ao salvar');
+    }
+  } catch(e) { alert('Erro: ' + e.message); }
+}</script>
 </body>
 </html>
