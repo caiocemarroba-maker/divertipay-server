@@ -50,6 +50,7 @@ async function migrarBanco() {
   await adicionarColuna('pagamentos', 'recolhido',   'TINYINT(1) DEFAULT 0');
   await adicionarColuna('pagamentos', 'mp_payment_id', 'VARCHAR(64) DEFAULT NULL');
   await adicionarColuna('pagamentos', 'mp_extornado',  'TINYINT(1) DEFAULT 0');
+  await adicionarColuna('fila_pulsos', 'pagamento_id', 'INT DEFAULT NULL');
   try {
     await db.query(`
       CREATE TABLE IF NOT EXISTS fila_pulsos (
@@ -546,4 +547,4 @@ setInterval(async () => {
 }, 60000);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('DivertiPay rodando na porta ' + PORT)); 
+app.listen(PORT, () => console.log('DivertiPay rodando na porta ' + PORT));
