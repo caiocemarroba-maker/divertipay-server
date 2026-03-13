@@ -419,7 +419,8 @@ app.post('/webhook/mercadopago', async (req, res) => {
   try {
     const xSignature = req.headers['x-signature'] || '';
     const xRequestId = req.headers['x-request-id'] || '';
-    const dataId     = req.query['data.id'] || req.body?.data?.id || '';
+    // IPN manda topic=payment&id=X na query, webhook manda data.id
+    const dataId     = req.query['id'] || req.query['data.id'] || req.body?.data?.id || '';
 
     // Valida assinatura (apenas em pagamentos reais - live_mode true)
     const secret = process.env.MP_WEBHOOK_SECRET || '';
@@ -435,10 +436,11 @@ app.post('/webhook/mercadopago', async (req, res) => {
       }
     }
 
-    const tipo = req.body?.type || '';
+    // IPN manda topic=payment na query, webhook manda type no body
+    const tipo = req.query?.topic || req.body?.type || '';
     console.log('[MP Webhook] tipo:', tipo, 'id:', dataId);
 
-    if (tipo !== 'payment' || !dataId) return res.sendStatus(200);
+    if ((tipo !== 'payment' && tipo !== 'merchant_order') || !dataId) return res.sendStatus(200);
 
     // Consulta pagamento no MP
     const mpToken = process.env.MP_ACCESS_TOKEN;
