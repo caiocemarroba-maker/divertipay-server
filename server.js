@@ -196,6 +196,19 @@ app.put('/devices/:id/mpid', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+// Vincular mp_store_id e valor_pulso ao aparelho (sem auth para facilitar setup)
+app.post('/admin/aparelho/:id/mp-store', async (req, res) => {
+  try {
+    const { mp_store_id, valor_pulso } = req.body;
+    await db.query(
+      'UPDATE aparelhos SET mp_store_id = ?, valor_pulso = ? WHERE id = ?',
+      [mp_store_id, valor_pulso || 1.00, req.params.id]
+    );
+    const [rows] = await db.query('SELECT id, nome, mp_store_id, valor_pulso FROM aparelhos WHERE id = ?', [req.params.id]);
+    res.json({ ok: true, aparelho: rows[0] });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 app.delete('/devices/:id', auth, async (req, res) => {
   try {
     await db.query('DELETE FROM fila_pulsos WHERE aparelho_id = ?', [req.params.id]);
