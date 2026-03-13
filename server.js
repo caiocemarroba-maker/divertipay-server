@@ -416,6 +416,7 @@ app.post('/esp/confirmar', async (req, res) => {
 // ── WEBHOOK MERCADO PAGO ──────────────────────────────────────
 
 app.post('/webhook/mercadopago', async (req, res) => {
+  console.log('[MP RAW] query:', JSON.stringify(req.query), 'body:', JSON.stringify(req.body));
   try {
     const xSignature = req.headers['x-signature'] || '';
     const xRequestId = req.headers['x-request-id'] || '';
