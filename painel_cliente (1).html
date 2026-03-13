@@ -760,7 +760,7 @@ async function carregarDados() {
     method:    p.tipo === 'pix' ? 'PIX' : p.tipo === 'cartao' ? 'Cartão' : 'Noteiro',
     date:      p.criado_em?.replace('T',' ').substring(0,16) || '',
     ok:        p.status === 'confirmado' || p.status === null || p.status === undefined || p.status === '',
-    tipo:      'normal',
+    tipo:      p.tipo || 'normal',
     recolhido: !!p.recolhido
   }));
 
@@ -1137,6 +1137,22 @@ function renderPayments(list) {
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           <div class="pay-val" style="color:${valColor};${strikeStyle}">R$${p.val}</div>
           ${btnRecolhido}
+          <button onclick="deletarPagamento(${p.id},'${p.method}')" title="Apagar registro"
+            style="width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);
+                   background:none;font-size:14px;cursor:pointer;display:flex;align-items:center;
+                   justify-content:center;flex-shrink:0;transition:all 0.15s"
+            onmouseover="this.style.borderColor='#ef4444';this.style.background='#fef2f2'"
+            onmouseout="this.style.borderColor='var(--border)';this.style.background='none'">
+            🗑️
+          </button>
+          ${p.tipo === 'pix' || p.tipo === 'cartao' ? `<button onclick="extornarPagamento(${p.id}, ${p.val})" title="Extornar pagamento"
+            style="width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);
+                   background:none;font-size:14px;cursor:pointer;display:flex;align-items:center;
+                   justify-content:center;flex-shrink:0;transition:all 0.15s"
+            onmouseover="this.style.borderColor='#f97316';this.style.background='#fff7ed'"
+            onmouseout="this.style.borderColor='var(--border)';this.style.background='none'">
+            ↩️
+          </button>` : '<div style="width:30px"></div>'}
         </div>
       </div>
     `;
@@ -2166,6 +2182,71 @@ async function saveMpStoreCli() {
       alert('Erro ao salvar');
     }
   } catch(e) { alert('Erro: ' + e.message); }
+}
+</script>
+
+<div id="modal-confirmar-acao" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center" onclick="if(event.target===this)fecharModalAcao()">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:380px;font-family:'Inter',sans-serif">
+    <div id="modal-acao-titulo" style="font-size:18px;font-weight:800;margin-bottom:8px"></div>
+    <div id="modal-acao-texto" style="font-size:13px;color:#888;margin-bottom:24px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="fecharModalAcao()" style="flex:1;padding:14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer">Cancelar</button>
+      <button id="modal-acao-btn" style="flex:1;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;color:#fff">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let acaoCallback = null;
+
+function abrirModalAcao(titulo, texto, corBtn, cb) {
+  document.getElementById('modal-acao-titulo').textContent = titulo;
+  document.getElementById('modal-acao-texto').textContent = texto;
+  document.getElementById('modal-acao-btn').style.background = corBtn;
+  document.getElementById('modal-acao-btn').onclick = async () => { fecharModalAcao(); await cb(); };
+  document.getElementById('modal-confirmar-acao').style.display = 'flex';
+}
+
+function fecharModalAcao() {
+  document.getElementById('modal-confirmar-acao').style.display = 'none';
+}
+
+async function deletarPagamento(id, metodo) {
+  abrirModalAcao(
+    '🗑️ Apagar registro',
+    `Apaga o registro #${id} (${metodo}) do histórico. O dinheiro NÃO é devolvido ao cliente.`,
+    '#ef4444',
+    async () => {
+      try {
+        const r = await api('DELETE', `/payments/${id}`);
+        if (r.ok) {
+          allPayments = allPayments.filter(p => p.id !== id);
+          filteredPayments = filteredPayments.filter(p => p.id !== id);
+          renderPayments(filteredPayments);
+          showToast('Registro apagado');
+        } else { showToast('Erro ao apagar'); }
+      } catch(e) { showToast('Erro: ' + e.message); }
+    }
+  );
+}
+
+async function extornarPagamento(id, valor) {
+  abrirModalAcao(
+    '↩️ Extornar pagamento',
+    `Devolve R$${valor} ao cliente via Mercado Pago. Esta ação não pode ser desfeita.`,
+    '#f97316',
+    async () => {
+      try {
+        const r = await api('POST', `/payments/${id}/extornar`);
+        if (r.ok) {
+          const p = allPayments.find(x => x.id === id);
+          if (p) { p.ok = false; p.status = 'extornado'; }
+          renderPayments(filteredPayments);
+          showToast('Extorno realizado com sucesso!');
+        } else { showToast('Erro: ' + (r.erro || 'falha no extorno')); }
+      } catch(e) { showToast('Erro: ' + e.message); }
+    }
+  );
 }
 </script>
 </body>
