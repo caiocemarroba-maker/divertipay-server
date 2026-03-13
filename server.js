@@ -396,6 +396,37 @@ app.get('/esp/comando', async (req, res) => {
   }
 });
 
+// ── DELETAR PAGAMENTO ─────────────────────────────────────────
+app.delete('/payments/:id', auth, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT p.id FROM pagamentos p JOIN aparelhos a ON a.id = p.aparelho_id JOIN clientes c ON c.id = a.cliente_id WHERE p.id = ? AND c.id = ?',
+      [req.params.id, req.user.id]
+    );
+    if (!rows.length) return res.status(404).json({ erro: 'Pagamento não encontrado' });
+    await db.query('DELETE FROM pagamentos WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── EXTORNAR PAGAMENTO ────────────────────────────────────────
+app.post('/payments/:id/extornar', auth, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT p.* FROM pagamentos p JOIN aparelhos a ON a.id = p.aparelho_id JOIN clientes c ON c.id = a.cliente_id WHERE p.id = ? AND c.id = ?',
+      [req.params.id, req.user.id]
+    );
+    if (!rows.length) return res.status(404).json({ erro: 'Pagamento não encontrado' });
+    const pag = rows[0];
+    if (pag.mp_extornado) return res.status(400).json({ erro: 'Já extornado' });
+    if (!pag.mp_payment_id) return res.status(400).json({ erro: 'Sem ID de pagamento MP' });
+    const mpToken = process.env.MP_ACCESS_TOKEN;
+    await extornarMP(pag.mp_payment_id, mpToken);
+    await db.query("UPDATE pagamentos SET status='extornado', mp_extornado=1 WHERE id=?", [pag.id]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 app.post('/esp/confirmar', async (req, res) => {
   try {
     const { token } = req.body;
@@ -547,4 +578,4 @@ setInterval(async () => {
 }, 60000);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('DivertiPay rodando na porta ' + PORT)); 
+app.listen(PORT, () => console.log('DivertiPay rodando na porta ' + PORT));
