@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const axios   = require('axios');
 const cors    = require('cors');
 const mysql   = require('mysql2/promise');
 const bcrypt  = require('bcryptjs');
@@ -42,15 +43,20 @@ async function adicionarColuna(tabela, coluna, definicao) {
 }
 
 async function migrarBanco() {
-  await adicionarColuna('aparelhos', 'updated_at', 'TIMESTAMP NULL DEFAULT NULL');
-  await adicionarColuna('pagamentos', 'status',    "VARCHAR(20) DEFAULT 'confirmado'");
-  await adicionarColuna('pagamentos', 'recolhido', 'TINYINT(1) DEFAULT 0');
+  await adicionarColuna('aparelhos', 'updated_at',   'TIMESTAMP NULL DEFAULT NULL');
+  await adicionarColuna('aparelhos', 'mp_store_id',  'VARCHAR(64) DEFAULT NULL');
+  await adicionarColuna('aparelhos', 'valor_pulso',  'DECIMAL(10,2) DEFAULT 1.00');
+  await adicionarColuna('pagamentos', 'status',      "VARCHAR(20) DEFAULT 'confirmado'");
+  await adicionarColuna('pagamentos', 'recolhido',   'TINYINT(1) DEFAULT 0');
+  await adicionarColuna('pagamentos', 'mp_payment_id', 'VARCHAR(64) DEFAULT NULL');
+  await adicionarColuna('pagamentos', 'mp_extornado',  'TINYINT(1) DEFAULT 0');
   try {
     await db.query(`
       CREATE TABLE IF NOT EXISTS fila_pulsos (
         id          INT AUTO_INCREMENT PRIMARY KEY,
         aparelho_id INT NOT NULL,
         pulsos      INT NOT NULL DEFAULT 1,
+        pagamento_id INT DEFAULT NULL,
         criado_em   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_aparelho (aparelho_id)
       )
@@ -381,9 +387,130 @@ app.post('/esp/confirmar', async (req, res) => {
     const { token } = req.body;
     if (!token) return res.status(400).json({ erro: 'Token obrigatorio' });
     await db.query('UPDATE aparelhos SET online = 1, updated_at = NOW() WHERE token = ?', [token]);
+
+    // Confirma pagamento MP pendente desse aparelho (se houver)
+    const [ap] = await db.query('SELECT id FROM aparelhos WHERE token = ?', [token]);
+    if (ap.length) {
+      await db.query(
+        "UPDATE pagamentos SET status = 'confirmado' WHERE aparelho_id = ? AND status = 'pendente'",
+        [ap[0].id]
+      );
+    }
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
+
+// ── WEBHOOK MERCADO PAGO ──────────────────────────────────────
+
+app.post('/webhook/mercadopago', async (req, res) => {
+  try {
+    const xSignature = req.headers['x-signature'] || '';
+    const xRequestId = req.headers['x-request-id'] || '';
+    const dataId     = req.query['data.id'] || req.body?.data?.id || '';
+
+    // Valida assinatura
+    const secret = process.env.MP_WEBHOOK_SECRET || '';
+    if (secret && xSignature) {
+      const ts = xSignature.split(',').find(p => p.startsWith('ts='))?.split('=')[1] || '';
+      const v1 = xSignature.split(',').find(p => p.startsWith('v1='))?.split('=')[1] || '';
+      const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts}`;
+      const hash = crypto_mp.createHmac('sha256', secret).update(manifest).digest('hex');
+      if (v1 && hash !== v1) {
+        console.warn('[MP] Assinatura invalida');
+        return res.sendStatus(401);
+      }
+    }
+
+    const tipo = req.body?.type || '';
+    console.log('[MP Webhook] tipo:', tipo, 'id:', dataId);
+
+    if (tipo !== 'payment' || !dataId) return res.sendStatus(200);
+
+    // Consulta pagamento no MP
+    const mpToken = process.env.MP_ACCESS_TOKEN;
+    if (!mpToken) return res.sendStatus(500);
+
+    const mpResp = await axios.get(`https://api.mercadopago.com/v1/payments/${dataId}`, {
+      headers: { Authorization: `Bearer ${mpToken}` }
+    });
+    const pg = mpResp.data;
+
+    if (pg.status !== 'approved') {
+      console.log('[MP] Nao aprovado:', pg.status);
+      return res.sendStatus(200);
+    }
+
+    const valor   = parseFloat(pg.transaction_amount) || 0;
+    const storeId = pg.store_id?.toString() || null;
+
+    console.log('[MP] Aprovado! valor:', valor, 'store_id:', storeId);
+
+    // Encontra aparelho pelo mp_store_id
+    let aparelho = null;
+    if (storeId) {
+      const [rows] = await db.query('SELECT * FROM aparelhos WHERE mp_store_id = ?', [storeId]);
+      if (rows.length) aparelho = rows[0];
+    }
+    if (!aparelho) {
+      console.warn('[MP] Aparelho nao encontrado para store_id:', storeId);
+      return res.sendStatus(200);
+    }
+
+    // Aparelho offline → extorna imediatamente
+    if (!aparelho.online) {
+      console.warn('[MP] Aparelho offline — extornando');
+      await extornarMP(dataId, mpToken);
+      return res.sendStatus(200);
+    }
+
+    // Calcula pulsos
+    const valorPulso = parseFloat(aparelho.valor_pulso) || 1;
+    const qtdPulsos  = Math.max(1, Math.round(valor / valorPulso));
+
+    // Salva pagamento como pendente
+    const [ins] = await db.query(
+      'INSERT INTO pagamentos (aparelho_id, tipo, valor, status, mp_payment_id) VALUES (?, ?, ?, ?, ?)',
+      [aparelho.id, 'pix', valor, 'pendente', dataId]
+    );
+    const pagamentoId = ins.insertId;
+
+    // Enfileira pulsos
+    await db.query('DELETE FROM fila_pulsos WHERE aparelho_id = ?', [aparelho.id]);
+    await db.query(
+      'INSERT INTO fila_pulsos (aparelho_id, pulsos, pagamento_id) VALUES (?, ?, ?)',
+      [aparelho.id, qtdPulsos, pagamentoId]
+    );
+
+    console.log(`[MP] ${aparelho.nome} → ${qtdPulsos} pulsos (pag #${pagamentoId})`);
+
+    // Timeout 20s — se ESP não confirmar, extorna
+    setTimeout(async () => {
+      try {
+        const [pgs] = await db.query('SELECT status FROM pagamentos WHERE id = ?', [pagamentoId]);
+        if (pgs.length && pgs[0].status === 'pendente') {
+          console.warn(`[MP] Timeout! Pag #${pagamentoId} sem confirmacao — extornando`);
+          await db.query('DELETE FROM fila_pulsos WHERE aparelho_id = ?', [aparelho.id]);
+          await db.query("UPDATE pagamentos SET status = 'extornado', mp_extornado = 1 WHERE id = ?", [pagamentoId]);
+          await extornarMP(dataId, mpToken);
+        }
+      } catch(e) { console.error('[MP Timeout ERRO]', e.message); }
+    }, 20000);
+
+    res.sendStatus(200);
+  } catch(e) {
+    console.error('[MP Webhook ERRO]', e.message);
+    res.sendStatus(500);
+  }
+});
+
+async function extornarMP(mpPaymentId, mpToken) {
+  try {
+    await axios.post(`https://api.mercadopago.com/v1/payments/${mpPaymentId}/refunds`, {}, {
+      headers: { Authorization: `Bearer ${mpToken}` }
+    });
+    console.log('[MP] Extorno OK:', mpPaymentId);
+  } catch(e) { console.error('[MP Extorno ERRO]', e.message); }
+}
 
 // Marca offline aparelhos sem heartbeat há mais de 35s
 setInterval(async () => {
