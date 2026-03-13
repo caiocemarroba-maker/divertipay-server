@@ -746,8 +746,9 @@ async function carregarDados() {
       id:     String(d.id),
       name:   d.nome,
       token:  d.token || '',
-      mpId:   d.mp_user_id || '—',
-      status: d.online ? 'online' : 'offline',
+      mpId:      d.mp_user_id || '—',
+      mpStoreId: d.mp_store_id || '',
+      status:    d.online ? 'online' : 'offline',
       today:  0, sales: 0, total: 0,
       cash:   parseFloat(d.noteiro_total) || 0
     }));
@@ -906,6 +907,7 @@ function renderDevices() {
             ${statusTxt} &nbsp;·&nbsp;
             <span style="font-size:11px;color:var(--muted)">MP:</span>
             <span style="font-size:11px;font-weight:700;color:var(--text);letter-spacing:0.5px">${d.mpId || '—'}</span>
+            ${d.mpStoreId ? `<span style="font-size:10px;background:#eff6ff;color:#1d4ed8;padding:1px 6px;border-radius:5px;margin-left:4px">Store: ${d.mpStoreId}</span>` : `<span style="font-size:10px;background:#fef9c3;color:#854d0e;padding:1px 6px;border-radius:5px;margin-left:4px">⚠ sem store_id</span>`}
           </div>
           <div style="display:flex;gap:7px;align-items:center;margin-top:6px;flex-wrap:wrap">
             <div onclick="openCashMenu(event,${i})"
@@ -937,6 +939,9 @@ function renderDevices() {
             <span class="dd-icon">✏️</span> Renomear Ponto
           </div>
           ${configBtn}
+          <div class="dd-item" onclick="openMpStoreCli('${d.id}','${d.mpStoreId}');closeAllDropdowns()">
+            <span class="dd-icon">🏪</span> Vincular MP Store
+          </div>
           <div class="dd-item danger" onclick="limparFila('${d.id}','${d.name}');closeAllDropdowns()">
             <span class="dd-icon">🧹</span> Limpar Fila de Pulsos
           </div>
@@ -2117,5 +2122,51 @@ function confirmRename() {
   </div>
 </div>
 
+
+<div id="modal-mp-store-cli" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;box-sizing:border-box" onclick="if(event.target===this)closeMpStoreCli()">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:400px;font-family:'Inter',sans-serif">
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px">🏪 Vincular MP Store</div>
+    <div id="mp-store-cli-sub" style="font-size:13px;color:#888;margin-bottom:20px"></div>
+    <div style="margin-bottom:8px;font-size:12px;color:#888">Encontre o Store ID no painel do Mercado Pago em <b>Seu negócio → Lojas e caixas</b></div>
+    <div style="margin-bottom:20px">
+      <input id="inp-mp-store-cli" type="text" placeholder="Ex: 127303313" style="width:100%;padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;outline:none;box-sizing:border-box">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeMpStoreCli()" style="flex:1;padding:14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer">Cancelar</button>
+      <button onclick="saveMpStoreCli()" style="flex:1;padding:14px;border:none;border-radius:12px;background:#f97316;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let mpStoreCliDeviceId = null;
+function openMpStoreCli(deviceId, currentStoreId) {
+  mpStoreCliDeviceId = deviceId;
+  document.getElementById('mp-store-cli-sub').textContent = 'Aparelho #' + deviceId;
+  document.getElementById('inp-mp-store-cli').value = currentStoreId || '';
+  document.getElementById('modal-mp-store-cli').style.display = 'flex';
+}
+function closeMpStoreCli() {
+  document.getElementById('modal-mp-store-cli').style.display = 'none';
+}
+async function saveMpStoreCli() {
+  const storeId = document.getElementById('inp-mp-store-cli').value.trim();
+  if (!storeId) { alert('Informe o Store ID'); return; }
+  try {
+    const r = await fetch(API_URL + '/admin/aparelho/' + mpStoreCliDeviceId + '/mp-store', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mp_store_id: storeId, valor_pulso: 1.00 })
+    });
+    const data = await r.json();
+    if (data.ok) {
+      closeMpStoreCli();
+      await carregarDados();
+    } else {
+      alert('Erro ao salvar');
+    }
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+</script>
 </body>
 </html>
