@@ -46,7 +46,8 @@ async function migrarBanco() {
   await adicionarColuna('aparelhos', 'updated_at',   'TIMESTAMP NULL DEFAULT NULL');
   await adicionarColuna('aparelhos', 'mp_store_id',  'VARCHAR(64) DEFAULT NULL');
   await adicionarColuna('aparelhos', 'valor_pulso',  'DECIMAL(10,2) DEFAULT 1.00');
-  await adicionarColuna('pagamentos', 'status',      "VARCHAR(20) DEFAULT 'confirmado'");
+  await adicionarColuna('pagamentos', 'status',      "VARCHAR(30) DEFAULT 'confirmado'");
+  try { await db.query("ALTER TABLE pagamentos MODIFY COLUMN status VARCHAR(30) DEFAULT 'confirmado'"); } catch(e) {}
   await adicionarColuna('pagamentos', 'recolhido',   'TINYINT(1) DEFAULT 0');
   await adicionarColuna('pagamentos', 'mp_payment_id', 'VARCHAR(64) DEFAULT NULL');
   await adicionarColuna('pagamentos', 'mp_extornado',  'TINYINT(1) DEFAULT 0');
