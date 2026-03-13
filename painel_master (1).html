@@ -887,7 +887,7 @@ function renderClients() {
               <span>MP user: ${d.mpId}</span>
               <span style="color:var(--muted)">·</span>
               <span>Pulso: R$ ${d.valorPulso.toFixed(2)}</span>
-              <button onclick="openMpStore('${d.id}','${d.mpStoreId}',${d.valorPulso})" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;color:var(--text)">✏️ Editar MP</button>
+              <button onclick="openMpStore('${d.id}','${d.mpStoreId}')" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;color:var(--text)">✏️ Editar MP</button>
             </div>
           </div>
           <div class="dev-val-col">
@@ -1194,11 +1194,10 @@ function showToast(msg) {
 </div>
 <script>
 let mpStoreDeviceId = null;
-function openMpStore(deviceId, currentStoreId, currentValorPulso) {
+function openMpStore(deviceId, currentStoreId) {
   mpStoreDeviceId = deviceId;
   document.getElementById('mp-store-sub').textContent = 'Aparelho #' + deviceId;
   document.getElementById('inp-mp-store-id').value = currentStoreId || '';
-  document.getElementById('inp-mp-valor-pulso').value = currentValorPulso || 1;
   document.getElementById('modal-mp-store').style.display = 'flex';
 }
 function closeMpStore() {
