@@ -427,7 +427,7 @@ app.post('/webhook/mercadopago', async (req, res) => {
       const ts = xSignature.split(',').find(p => p.startsWith('ts='))?.split('=')[1] || '';
       const v1 = xSignature.split(',').find(p => p.startsWith('v1='))?.split('=')[1] || '';
       const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts}`;
-      const hash = crypto_mp.createHmac('sha256', secret).update(manifest).digest('hex');
+      const hash = crypto.createHmac('sha256', secret).update(manifest).digest('hex');
       if (v1 && hash !== v1) {
         console.warn('[MP] Assinatura invalida');
         return res.sendStatus(401);
