@@ -27,7 +27,7 @@ function auth(req, res, next) {
 }
 
 // ── MIGRAÇÃO AUTOMÁTICA ──────────────────────────────────────
-async function adicionarColuna(tabela, coluna, definicao) {
+async function adicionarColuna(tabela, coluna, definicao) {  
   try {
     const [cols] = await db.query(
       'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
