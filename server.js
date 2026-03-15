@@ -496,6 +496,19 @@ app.post('/webhook/mercadopago', async (req, res) => {
     const posId  = pg.pos_id?.toString() || null;
     const storeId = pg.store_id?.toString() || null;
 
+    // Log completo para identificar os campos corretos
+    console.log("[MP] CAMPOS COMPLETOS:", JSON.stringify({
+      id:                  pg.id,
+      status:              pg.status,
+      valor:               pg.transaction_amount,
+      pos_id:              pg.pos_id,
+      store_id:            pg.store_id,
+      collector_id:        pg.collector_id,
+      external_reference:  pg.external_reference,
+      payment_method_id:   pg.payment_method_id,
+      point_of_interaction: pg.point_of_interaction?.type,
+      additional_info_items: pg.additional_info?.items?.[0]?.id,
+    }));
     console.log("[MP] Aprovado! valor:", valor, "pos_id:", posId, "store_id:", storeId);
 
     // Encontra aparelho pelo mp_pos_id (caixa especifico) — fallback store_id
