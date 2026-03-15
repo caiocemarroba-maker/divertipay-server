@@ -485,7 +485,7 @@ app.post('/webhook/mercadopago', async (req, res) => {
 
     if (tipo === 'merchant_order') {
       // merchant_order: busca a order e extrai o pagamento aprovado
-      const orderResp = await axios.get(`https://api.mercadopago.com/merchant_orders/${dataId}`, {
+      const orderResp = await axios.get(`https://api.mercadolibre.com/merchant_orders/${dataId}`, {
         headers: { Authorization: `Bearer ${mpToken}` }
       });
       const order = orderResp.data;
@@ -605,7 +605,7 @@ setInterval(async () => {
       'UPDATE aparelhos SET online = 0 WHERE updated_at IS NOT NULL AND updated_at < NOW() - INTERVAL 35 SECOND'
     );
   } catch(e) {}
-}, 15000);  
+}, 15000);
 
 // Limpa fila com mais de 10 minutos (segurança)
 setInterval(async () => {
