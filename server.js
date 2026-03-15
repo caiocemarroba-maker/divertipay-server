@@ -27,7 +27,7 @@ function auth(req, res, next) {
 }
 
 // ── MIGRAÇÃO AUTOMÁTICA ──────────────────────────────────────
-async function adicionarColuna(tabela, coluna, definicao) {  
+async function adicionarColuna(tabela, coluna, definicao) {
   try {
     const [cols] = await db.query(
       'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
@@ -485,11 +485,9 @@ app.post('/webhook/mercadopago', async (req, res) => {
 
     if (tipo === 'merchant_order') {
       // merchant_order: busca a order e extrai o pagamento aprovado
-      const orderResp = await axios.get(`https://api.mercadolibre.com/merchant_orders/${dataId}`, {
-        headers: { Authorization: `Bearer ${mpToken}` }
-      });
+      const orderResp = await axios.get(`https://api.mercadolibre.com/merchant_orders/${dataId}?access_token=${mpToken}`);
       const order = orderResp.data;
-      console.log('[MP Order] status:', order.order_status, 'pos_id:', order.pos_id, 'store_id:', order.store_id, 'ext_ref:', order.external_reference);
+      console.log('[MP Order] status:', order.order_status, 'collector:', order.collector?.id, 'ext_ref:', order.external_reference, 'app_id:', order.application_id, 'client_id:', order.client_id);
       if (order.order_status !== 'paid') {
         console.log('[MP Order] nao paga ainda, ignorando');
         return res.sendStatus(200);
@@ -499,12 +497,14 @@ app.post('/webhook/mercadopago', async (req, res) => {
         console.log('[MP Order] sem pagamento aprovado');
         return res.sendStatus(200);
       }
+      // collector.id = ID do vendedor MP = mp_store_id no banco
+      const collectorId = order.collector?.id?.toString() || null;
       pg = {
         id:                 pagAprovado.id,
         status:             'approved',
         transaction_amount: pagAprovado.total_paid_amount || pagAprovado.transaction_amount,
-        pos_id:             order.pos_id,
-        store_id:           order.store_id,
+        pos_id:             order.pos_id?.toString() || null,
+        store_id:           collectorId,
         external_reference: order.external_reference,
       };
     } else if (tipo === 'payment') {
