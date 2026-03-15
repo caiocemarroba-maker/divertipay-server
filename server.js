@@ -476,40 +476,56 @@ app.post('/webhook/mercadopago', async (req, res) => {
     const tipo = req.query?.topic || req.body?.type || '';
     console.log('[MP Webhook] tipo:', tipo, 'id:', dataId);
 
-    if ((tipo !== 'payment' && tipo !== 'merchant_order') || !dataId) return res.sendStatus(200);
+    if (!tipo || !dataId) return res.sendStatus(200);
 
-    // Consulta pagamento no MP
     const mpToken = process.env.MP_ACCESS_TOKEN;
     if (!mpToken) return res.sendStatus(500);
 
-    const mpResp = await axios.get(`https://api.mercadopago.com/v1/payments/${dataId}`, {
-      headers: { Authorization: `Bearer ${mpToken}` }
-    });
-    const pg = mpResp.data;
+    let pg = null;
 
-    if (pg.status !== 'approved') {
-      console.log('[MP] Nao aprovado:', pg.status);
+    if (tipo === 'merchant_order') {
+      // merchant_order: busca a order e extrai o pagamento aprovado
+      const orderResp = await axios.get(`https://api.mercadopago.com/merchant_orders/${dataId}`, {
+        headers: { Authorization: `Bearer ${mpToken}` }
+      });
+      const order = orderResp.data;
+      console.log('[MP Order] status:', order.order_status, 'pos_id:', order.pos_id, 'store_id:', order.store_id, 'ext_ref:', order.external_reference);
+      if (order.order_status !== 'paid') {
+        console.log('[MP Order] nao paga ainda, ignorando');
+        return res.sendStatus(200);
+      }
+      const pagAprovado = (order.payments || []).find(p => p.status === 'approved');
+      if (!pagAprovado) {
+        console.log('[MP Order] sem pagamento aprovado');
+        return res.sendStatus(200);
+      }
+      pg = {
+        id:                 pagAprovado.id,
+        status:             'approved',
+        transaction_amount: pagAprovado.total_paid_amount || pagAprovado.transaction_amount,
+        pos_id:             order.pos_id,
+        store_id:           order.store_id,
+        external_reference: order.external_reference,
+      };
+    } else if (tipo === 'payment') {
+      const mpResp = await axios.get(`https://api.mercadopago.com/v1/payments/${dataId}`, {
+        headers: { Authorization: `Bearer ${mpToken}` }
+      });
+      pg = mpResp.data;
+    } else {
       return res.sendStatus(200);
     }
 
-    const valor  = parseFloat(pg.transaction_amount) || 0;
-    const posId  = pg.pos_id?.toString() || null;
+    if (!pg || pg.status !== 'approved') {
+      console.log('[MP] Nao aprovado:', pg?.status);
+      return res.sendStatus(200);
+    }
+
+    const valor   = parseFloat(pg.transaction_amount) || 0;
+    const posId   = pg.pos_id?.toString() || null;
     const storeId = pg.store_id?.toString() || null;
 
-    // Log completo para identificar os campos corretos
-    console.log("[MP] CAMPOS COMPLETOS:", JSON.stringify({
-      id:                  pg.id,
-      status:              pg.status,
-      valor:               pg.transaction_amount,
-      pos_id:              pg.pos_id,
-      store_id:            pg.store_id,
-      collector_id:        pg.collector_id,
-      external_reference:  pg.external_reference,
-      payment_method_id:   pg.payment_method_id,
-      point_of_interaction: pg.point_of_interaction?.type,
-      additional_info_items: pg.additional_info?.items?.[0]?.id,
-    }));
-    console.log("[MP] Aprovado! valor:", valor, "pos_id:", posId, "store_id:", storeId);
+    console.log('[MP] Aprovado! valor:', valor, 'pos_id:', posId, 'store_id:', storeId);
 
     // Encontra aparelho pelo mp_pos_id (caixa especifico) — fallback store_id
     let aparelho = null;
@@ -599,4 +615,4 @@ setInterval(async () => {
 }, 60000);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('DivertiPay rodando na porta ' + PORT)); 
+app.listen(PORT, () => console.log('DivertiPay rodando na porta ' + PORT));
