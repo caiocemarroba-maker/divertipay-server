@@ -605,7 +605,7 @@ setInterval(async () => {
       'UPDATE aparelhos SET online = 0 WHERE updated_at IS NOT NULL AND updated_at < NOW() - INTERVAL 35 SECOND'
     );
   } catch(e) {}
-}, 15000);
+}, 15000);  
 
 // Limpa fila com mais de 10 minutos (segurança)
 setInterval(async () => {
