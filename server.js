@@ -45,6 +45,7 @@ async function adicionarColuna(tabela, coluna, definicao) {
 async function migrarBanco() {
   await adicionarColuna('aparelhos', 'updated_at',   'TIMESTAMP NULL DEFAULT NULL');
   await adicionarColuna('aparelhos', 'mp_store_id',  'VARCHAR(64) DEFAULT NULL');
+  await adicionarColuna('aparelhos', 'mp_pos_id',    'VARCHAR(64) DEFAULT NULL');
   await adicionarColuna('aparelhos', 'valor_pulso',  'DECIMAL(10,2) DEFAULT 1.00');
   await adicionarColuna('pagamentos', 'status',      "VARCHAR(30) DEFAULT 'confirmado'");
   try { await db.query("ALTER TABLE pagamentos MODIFY COLUMN status VARCHAR(30) DEFAULT 'confirmado'"); } catch(e) {}
@@ -160,7 +161,7 @@ app.get('/auth/me', auth, async (req, res) => {
 app.get('/devices', auth, async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT id, nome, token, mp_user_id, mp_store_id, valor_pulso, online, noteiro_total FROM aparelhos WHERE cliente_id = ?',
+      'SELECT id, nome, token, mp_user_id, mp_store_id, mp_pos_id, valor_pulso, online, noteiro_total FROM aparelhos WHERE cliente_id = ?',
       [req.user.id]
     );
     res.json(rows);
@@ -198,15 +199,16 @@ app.put('/devices/:id/mpid', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// Vincular mp_store_id e valor_pulso ao aparelho (sem auth para facilitar setup)
-app.post('/admin/aparelho/:id/mp-store', async (req, res) => {
+// Vincular mp_store_id, mp_pos_id ao aparelho (identificacao do caixa no MP)
+app.post("/admin/aparelho/:id/mp-store", async (req, res) => {
   try {
-    const { mp_store_id, valor_pulso } = req.body;
+    const { mp_store_id, mp_pos_id } = req.body;
+    if (!mp_pos_id) return res.status(400).json({ erro: "mp_pos_id obrigatorio" });
     await db.query(
-      'UPDATE aparelhos SET mp_store_id = ?, valor_pulso = ? WHERE id = ?',
-      [mp_store_id, valor_pulso || 1.00, req.params.id]
+      "UPDATE aparelhos SET mp_store_id = ?, mp_pos_id = ? WHERE id = ?",
+      [mp_store_id || null, mp_pos_id, req.params.id]
     );
-    const [rows] = await db.query('SELECT id, nome, mp_store_id, valor_pulso FROM aparelhos WHERE id = ?', [req.params.id]);
+    const [rows] = await db.query("SELECT id, nome, mp_store_id, mp_pos_id, valor_pulso FROM aparelhos WHERE id = ?", [req.params.id]);
     res.json({ ok: true, aparelho: rows[0] });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
@@ -246,7 +248,7 @@ app.get('/master/clients', async (req, res) => {
     );
     for (const c of clientes) {
       const [aparelhos] = await db.query(
-        'SELECT id, nome, token, mp_user_id, mp_store_id, valor_pulso, online, noteiro_total FROM aparelhos WHERE cliente_id = ?',
+        'SELECT id, nome, token, mp_user_id, mp_store_id, mp_pos_id, valor_pulso, online, noteiro_total FROM aparelhos WHERE cliente_id = ?',
         [c.id]
       );
       c.aparelhos = aparelhos;
@@ -490,19 +492,24 @@ app.post('/webhook/mercadopago', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    const valor   = parseFloat(pg.transaction_amount) || 0;
+    const valor  = parseFloat(pg.transaction_amount) || 0;
+    const posId  = pg.pos_id?.toString() || null;
     const storeId = pg.store_id?.toString() || null;
 
-    console.log('[MP] Aprovado! valor:', valor, 'store_id:', storeId);
+    console.log("[MP] Aprovado! valor:", valor, "pos_id:", posId, "store_id:", storeId);
 
-    // Encontra aparelho pelo mp_store_id
+    // Encontra aparelho pelo mp_pos_id (caixa especifico) — fallback store_id
     let aparelho = null;
-    if (storeId) {
-      const [rows] = await db.query('SELECT * FROM aparelhos WHERE mp_store_id = ?', [storeId]);
+    if (posId) {
+      const [rows] = await db.query("SELECT * FROM aparelhos WHERE mp_pos_id = ?", [posId]);
+      if (rows.length) aparelho = rows[0];
+    }
+    if (!aparelho && storeId) {
+      const [rows] = await db.query("SELECT * FROM aparelhos WHERE mp_store_id = ?", [storeId]);
       if (rows.length) aparelho = rows[0];
     }
     if (!aparelho) {
-      console.warn('[MP] Aparelho nao encontrado para store_id:', storeId);
+      console.warn("[MP] Aparelho nao encontrado para pos_id:", posId, "store_id:", storeId);
       return res.sendStatus(200);
     }
 
@@ -579,4 +586,4 @@ setInterval(async () => {
 }, 60000);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('DivertiPay rodando na porta ' + PORT)); 
+app.listen(PORT, () => console.log('DivertiPay rodando na porta ' + PORT));
