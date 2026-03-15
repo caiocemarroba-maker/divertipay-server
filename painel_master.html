@@ -669,6 +669,7 @@ async function carregarClientes() {
           name:      d.nome,
           mpId:      d.mp_user_id || '—',
           mpStoreId: d.mp_store_id || '',
+          mpPosId:   d.mp_pos_id   || '',
           valorPulso: parseFloat(d.valor_pulso) || 1,
           token:     d.token || '',
           status:    d.online ? 'online' : 'offline',
@@ -887,7 +888,7 @@ function renderClients() {
               <span>MP user: ${d.mpId}</span>
               <span style="color:var(--muted)">·</span>
               <span>Pulso: R$ ${d.valorPulso.toFixed(2)}</span>
-              <button onclick="openMpStore('${d.id}','${d.mpStoreId}')" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;color:var(--text)">✏️ Editar MP</button>
+              <button onclick="openMpStore('${d.id}','${d.mpStoreId}','${d.mpPosId}')" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;color:var(--text)">✏️ Editar MP</button>
             </div>
           </div>
           <div class="dev-val-col">
@@ -1177,26 +1178,46 @@ function showToast(msg) {
   </div>
 </div>
 <div id="modal-mp-store" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;box-sizing:border-box" onclick="if(event.target===this)closeMpStore()">
-  <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:400px;font-family:'Inter',sans-serif">
-    <div style="font-size:18px;font-weight:800;margin-bottom:4px">🏪 Configurar MP</div>
+  <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:420px;font-family:'Inter',sans-serif">
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px">🏪 Vincular caixa ao MP</div>
     <div id="mp-store-sub" style="font-size:13px;color:var(--muted);margin-bottom:20px"></div>
-    <div style="margin-bottom:20px">
-      <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px">MP Store ID (loja no Mercado Pago)</label>
-      <input id="inp-mp-store-id" type="text" placeholder="Ex: 127303313" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;box-sizing:border-box">
+
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:#92400e;line-height:1.6">
+      <b>Como obter os IDs:</b><br>
+      No painel MP → Seu negócio → Lojas e caixas<br>
+      <b>Store ID</b> = ID da loja (local físico)<br>
+      <b>PDV / Pos ID</b> = ID do caixa individual (maquininha)
     </div>
+
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px">Store ID — loja (opcional)</label>
+      <input id="inp-mp-store-id" type="text" placeholder="Ex: 127303313"
+        style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;box-sizing:border-box"
+        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+    </div>
+
+    <div style="margin-bottom:20px">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px">PDV / Pos ID — caixa individual <span style="color:var(--red)">*obrigatório</span></label>
+      <input id="inp-mp-pos-id" type="text" placeholder="Ex: PAX_884939201"
+        style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;box-sizing:border-box"
+        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      <div style="font-size:11px;color:var(--muted);margin-top:5px">Este ID identifica qual máquina recebeu o pagamento</div>
+    </div>
+
     <div style="display:flex;gap:10px">
       <button onclick="closeMpStore()" style="flex:1;padding:14px;border:1.5px solid var(--border);border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer">Cancelar</button>
-      <button onclick="saveMpStore()" style="flex:1;padding:14px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Salvar</button>
+      <button onclick="saveMpStore()" style="flex:1;padding:14px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer">✅ Salvar</button>
     </div>
   </div>
 </div>
 
 <script>
 let mpStoreDeviceId = null;
-function openMpStore(deviceId, currentStoreId) {
+function openMpStore(deviceId, currentStoreId, currentPosId) {
   mpStoreDeviceId = deviceId;
   document.getElementById('mp-store-sub').textContent = 'Aparelho #' + deviceId;
   document.getElementById('inp-mp-store-id').value = currentStoreId || '';
+  document.getElementById('inp-mp-pos-id').value = currentPosId || '';
   document.getElementById('modal-mp-store').style.display = 'flex';
 }
 function closeMpStore() {
@@ -1204,20 +1225,21 @@ function closeMpStore() {
 }
 async function saveMpStore() {
   const storeId = document.getElementById('inp-mp-store-id').value.trim();
-  if (!storeId) { alert('Informe o Store ID'); return; }
+  const posId   = document.getElementById('inp-mp-pos-id').value.trim();
+  if (!posId) { alert('Informe o PDV / Pos ID do caixa'); return; }
   try {
     const r = await fetch(API_URL + '/admin/aparelho/' + mpStoreDeviceId + '/mp-store', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mp_store_id: storeId, valor_pulso: 1.00 })
+      body: JSON.stringify({ mp_store_id: storeId || null, mp_pos_id: posId })
     });
     const data = await r.json();
     if (data.ok) {
       closeMpStore();
       await carregarClientes();
-      showToast('MP Store vinculado!');
+      showToast('Caixa vinculado ao MP!');
     } else {
-      alert('Erro ao salvar');
+      alert('Erro: ' + (data.erro || 'Tente novamente'));
     }
   } catch(e) { alert('Erro: ' + e.message); }
 }
